@@ -1,0 +1,74 @@
+----------------- Last Sensors --------------------------
+///// LiDAR \\\\\
+Sensor type: Position - Absolute 
+-- Strengths --
+- Lots of points
+- Fast refresh rate
+
+-- Weaksnesses --
+- Unreliable at short range
+- Large clearance needed
+- Dependant on target material and orientation
+
+///// Gyro \\\\\
+Sensor type: Orientation - Relative 
+-- Strengths --
+- Small
+- Reliable
+- Independant
+
+-- Weaksnesses --
+- Medium drift
+
+///// Camera \\\\\
+Sensor type: Obstacle detection 
+-- Strengths --
+- Small
+- Responsive
+
+-- Weaksnesses --
+- Dependant on light
+- Large clearance needed
+
+///// Stepper odometry \\\\\
+Sensor type: Position - Relative 
+-- Strengths --
+- Accurate
+- Integrated into stepper
+
+-- Weaksnesses --
+- Dependant on orientation (Steering), not missing steps
+
+---------------------- Available Sensors -------------------------
+(All of the above)
+
+///// Dual wheel odometry \\\\\
+Sensor type: Position - relative
+-- Strengths --
+- Very Accurate
+
+-- Weaksnesses --
+- Dependant on orientation 
+
+///// Dual wheel odometry \\\\\
+Sensor type: Orientation - relative
+-- Strengths --
+- Very Accurate (????)
+
+-- Weaksnesses --
+- May be fragile
+
+
+///// Optical flow \\\\\
+Sensor type: Position - relative
+-- Strengths --
+- mediocerly accurate
+
+-- Weaksnesses --
+- Highly dependant on external factors
+
+// Selected Sensors
+LiDAR
+Camera
+Odometry 
+Depending on the orientation performance of the odometry also Gyro
