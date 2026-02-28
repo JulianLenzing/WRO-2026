@@ -1,0 +1,3 @@
+[DistanceNoiseStd] 0.200000
+[AngleNoiseStdDeg] 2.000000
+[RayCount] 50

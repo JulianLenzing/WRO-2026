@@ -1,5 +1,11 @@
-Blöcke.drawio
 *.log
 *.tmp
 *.xml
 *.iml
+*.pack
+build/
+
+/pi5Software/lib/*
+
+/pi5Software/Test
+Blöcke.drawio
