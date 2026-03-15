@@ -1,22 +1,39 @@
+#pragma once
+
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
 #include <PiPCA9685/PCA9685.h>
-#include "servoControl.h"
 
-ServoControl::ServoControl(float pAngleRange, float pDutyCycleRange)
-    : angleRange(pAngleRange),
-      dutyCycleRange(pDutyCycleRange),
-      pca("/dev/i2c-1", 0x40)
-	{
-		pca.set_pwm_freq(50.0);
-	}
-	
-	void ServoControl::setMs(float ms){
-	  int off = int(ms/20.0f*4096.0f);
-	  pca.set_pwm(0, 0, off);
-	}
-  
+class ServoControl {
+public:
+    ServoControl(int pLine, float pAngleRange, float pDutyCycleRange = 1.0f)
+    : line(pLine),
+    angleRange(pAngleRange),
+    dutyCycleRange(pDutyCycleRange),
+    pca("/dev/i2c-1", 0x40)
+    {
+        pca.set_pwm_freq(50.0);
+    }
+
+    ~ServoControl() {
+        setMs(1.5);
+    }
+    
+    void setAngle(float angle);
+    
+    void setMs(float ms){
+        int off = int(ms/20.0f*4096.0f);
+        pca.set_pwm(line, 0, off);
+    }
+
+private:
+    int line;
+    float angleRange;
+    float dutyCycleRange;
+    PiPCA9685::PCA9685 pca;
+};
+
   /*
 void ServoControl::setAngle(float angle) {
 		float lowerBoundary = angleRange / 2.0f;
@@ -59,3 +76,8 @@ void ServoControl::setAngle(float angle)
     pca.set_pwm(0, 0, off);
 }
 */
+
+
+	
+
+

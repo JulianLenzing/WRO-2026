@@ -1,6 +1,12 @@
 #include <iostream>
 #include <ostream>
+#include <fstream>
+#include <iomanip>
 
+
+#include "RobotSystem.h"
+#include "StateMachine.h"
+#include "State.h"
 #include "lidar.h"
 #include "poseEstimation.h"
 #include "LidarPoint.h"
@@ -10,29 +16,10 @@
 #include "DisplayUserInterface.h"
 #include "GuidanceData.h"
 #include "guidance.h"
-
-
-#include <fstream>
-#include <iomanip>
-
-void writeLidarScanToFile(const LidarScan& scan, const std::string& filename)
-{
-    static std::ofstream out(filename, std::ios::app); // append mode
-
-    if (!out.is_open()) {
-        std::cerr << "Failed to open file: " << filename << std::endl;
-        return;
-    }
-
-    for (const auto& p : scan.scan) {
-        out << std::fixed << std::setprecision(2)
-            << p.distance << " "
-            << p.angle << "\n";
-    }
-
-    out << "----\n"; // separator between scans (optional)
-}
-
+#include "InitState.h"
+#include "StartState.h"
+#include "RunCourseState.h"
+#include "StopState.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -44,70 +31,60 @@ static int initGLFW() {
     glfwSetErrorCallback(glfw_error_callback);
     // Initialize GLFW
     if (!glfwInit()) {
-        std::cout << "Failed to initialize GLFW\n";
         return 0;
     }
     return 1;
 }
 
+/*
+enum MainState{
+	MainStateInit, 					// Setup software
+	MainStateWaitForStart, 				// For the start button to be pressed
+	MainStateStart, 				// Start Sensors
+	MainStateFindStartingLocation, 			// Find which in which of the possible locations the robot is
+	MainStateUnpark, 				// Leave the parking area
+	MainStateRunCourse,				// Complete the rounds and pass obstacles on the correct side
+	MainStatePark,					// Leave the vehicle inside the parking area
+	MainStateEnd,					// Stop sensors
+	MainStateDeinit					// Free resources and stop software
+};
+*/
+
 int main(){
 	// Initialize GLFW
-    if (!initGLFW()) {std::cout<<"Could not initialise GLFW"<<std::endl; return 0;}
-    // Set OpenGL version hints
+	if (!initGLFW()) {std::cout<<"Could not initialise GLFW"<<std::endl; return 0;}
+    
+	// Set OpenGL version hints
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	    
+	RobotSystem robot;
+	StateMachine sm;
+	InitState initState;
+	StartState startState;
+	RunCourseState runCourseState;
+	StopState stopState;
+	//std::thread guidanceThread(guidanceMain, ref(robot.guidanceData));
+
+	sm.setState(&initState, robot);
+	sm.setState(&startState, robot);
+	while(!robot.startActivated)
+	{
+		sm.update(robot);
+	}
 	
-	// Initialize Guis
-	Graphics gp(1000, 1000, BLACK);
-	Visibility visibility;
-	DisplayUserInterface displayUI(visibility);
-	visibility.setLineVisibility(SLAM_DEBUG_LINE, false);
-	
-	// Init pose estimation
-	initPoseEstimation();
-	
-	// Init the Lidar
-	sl::ILidarDriver* lidarDriver = *sl::createLidarDriver();
-	if(!lidarDriver) printf("Lidar Driver not correctly initialised!");
-	
-	// Init guidance
-	GuidanceData guidanceData;
-    //std::thread guidanceThread(guidanceMain, ref(guidanceData));
-    
-    // --------------------- Start ------------------------ //
-    
-    // Start Lidar
-    startLidar(lidarDriver);
-    
-    // Start guidance
-    //guidanceData.start();
-	
-	Vec2f estimatedPosition(0.5f, 0.5f);
+	sm.setState(&runCourseState, robot);
 	while(true){
-		dpd.clear();
-		LidarScan lidarScan;
-		getLidarScan(lidarDriver, lidarScan, 1, 0.25);
-		//for(auto p : lidarScan.scan) {printf("%.2f %.2f\n", p.distance, p.angle);}
-		writeLidarScanToFile(lidarScan, "LidarTestData");
-		Vec2f newEstimatedPosition(estimatedPosition);
-		doPoseEstimation(lidarScan, estimatedPosition, 0.1f, newEstimatedPosition);
-		estimatedPosition = estimatedPosition * 0.8 + newEstimatedPosition * 0.2;
-		guidanceData.appendWaypoint(Vec2f(1, 1));
-		
-		displayUI.update();
-		dpd.updateVisibility(visibility);	
-		gp.update(dpd);
-		if(displayUI.exit) break;
-	
+		sm.update(robot);
+		if(robot.displayUI.exit) break;
 		std::this_thread::sleep_for(std::chrono::milliseconds(110));
 	}
 
-	// Stop sensors
-	stopLidar(lidarDriver);
-	
+	sm.setState(&stopState, robot);
+
 	// Stop other threads
-	guidanceData.terminate();
+	//guidanceData.terminate();
 	//if (guidanceThread.joinable()) {
 	//	guidanceThread.join();
 	//}

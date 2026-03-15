@@ -6,7 +6,7 @@
 /* user includes */
 #include <lgpio.h>
 #include "GuidanceData.h"
-#include "servoControl.h"
+#include "ServoControl.h"
 
 /* Steering Servo parameters */
 #define MAX_STEERING_ANGLE 45

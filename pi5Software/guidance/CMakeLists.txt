@@ -12,7 +12,6 @@ target_include_directories( guidance PRIVATE
 find_package(Threads REQUIRED)
 
 target_link_libraries( guidance PUBLIC
-    servoControl
     rt
     Threads::Threads
 )

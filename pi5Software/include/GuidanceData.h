@@ -1,8 +1,11 @@
+#pragma once
+
 #include <iostream>
 #include <thread>
 #include <mutex>
 #include <queue>
 #include <optional>
+
 #include "Vec2f.h"
 
 class GuidanceData
