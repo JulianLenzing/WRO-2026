@@ -1,17 +1,11 @@
 #include "slam.h"
+#include "LidarPoint.h"
+#include "Landmarks.h"
+
+#define MIN_POINT_DISTANCE 0.3f
+#define MAX_POINT_DISTANCE 3.65f
 
 using namespace std;
-
-void generateLandmarks(vector<Line>& lms) {
-    lms.emplace_back(Vec2f(0,0), Vec2f(0, 3));
-    lms.emplace_back(Vec2f(0, 3), Vec2f(3, 3));
-    lms.emplace_back(Vec2f(3, 3), Vec2f(3, 0));
-    lms.emplace_back(Vec2f(3, 0), Vec2f(0, 0));
-    lms.emplace_back(Vec2f(1, 1), Vec2f(1, 2));
-    lms.emplace_back(Vec2f(1, 2), Vec2f(2, 2));
-    lms.emplace_back(Vec2f(2, 2), Vec2f(2, 1));
-    lms.emplace_back(Vec2f(2, 1), Vec2f(1, 1));
-}
 
 static float angleWeight(const Line& a, const Line& b)
 {
@@ -131,9 +125,8 @@ void generateTestPoints(
     }
 }
 
-bool isPointUseable(LidarPoint lp, float minDistance, float maxDistance, const Vec2f& xRange, const Vec2f& yRange, const vector<Line>& lms, size_t& landmark) {
+bool isPointUseable(LidarPoint& lp, float minDistance, float maxDistance, const Vec2f& xRange, const Vec2f& yRange, const vector<Line>& lms) {
     bool isPointUseable = true;
-    landmark = -1;
     
     // Minimum and maximum distance check
     if(lp.distance <= minDistance || lp.distance >= maxDistance) return false;
@@ -174,49 +167,59 @@ bool isPointUseable(LidarPoint lp, float minDistance, float maxDistance, const V
         else {
             correspondingIndex[i] = -1;
             isPointUseable = false; // If a line has no intersection this point is not useable
-            //cout << "Function - isPointUseable: No intersection found" << endl;
+            //cout << "No intersection found" << endl;
         }
     }
     for (int i = 1; i < size; i++) {
         if (correspondingIndex[i-1] != correspondingIndex[i]) {
             isPointUseable = false;
+            //printf("Inconsistent corresponding landmark indices: %d and %d on index %d\n", correspondingIndex[i-1], correspondingIndex[i], i);
         }
     }
-    if (isPointUseable) landmark = correspondingIndex[0];
+    if (isPointUseable) lp.lmIndex = correspondingIndex[0];
+    //printf("Index: %d\n", lp.lmIndex);
     return isPointUseable;
 }
 
-optional<Vec2f> processLidarPoints(const vector<LidarPoint>& lidarPoints, const vector<Line>& lms, Vec2f estimatedPosition, Vec2f xRange, Vec2f yRange) {
-    vector<Line> parallels;
-    for (auto lp : lidarPoints) {
-        Vec2f tmp(estimatedPosition + lp.getDirection() * lp.distance);
-        size_t lmIndex = -1;
-        bool useable = isPointUseable(lp, 0.3, 3.65, xRange, yRange, lms, lmIndex);
-        if (useable) {
-            dpd.appendPoint(lp.point() + estimatedPosition, BLUE, USEABLE_LIDAR_POINT_POINT);
-            //printf("%f, %f\n", lp.point().x, lp.point().y);
-            Vec2f normal = lms[lmIndex].normal();
-            Vec2f normalOpposite = normal * -1.0f;
-
-            float perpendicularDistance = lp.distance * fabs(lp.getDirection().dot(normal));
-            Line parallel1 = lms[lmIndex];
-            parallel1.start += normal * perpendicularDistance;
-            parallel1.end += normal * perpendicularDistance;
-
-            Line parallel2 = lms[lmIndex];
-            parallel2.start += normalOpposite * perpendicularDistance;
-            parallel2.end += normalOpposite * perpendicularDistance;
-
-            Vec2f point = lms[lmIndex].closestPointOnInfinite(estimatedPosition);
-            float fit1 = Vec2f::pointingTowards(point, normal, estimatedPosition);
-            float fit2 = Vec2f::pointingTowards(point, normalOpposite, estimatedPosition);
-            Line parallel;
-            if (fit1 > fit2) parallel = parallel1;
-            else parallel = parallel2;
-            dpd.appendLine(parallel, GREEN, SLAM_DEBUG_LINE);
-            parallels.push_back(parallel);
+int getUsablePoints(LidarScan scan, const Vec2f& xRange, const Vec2f& yRange, const Landmarks& landmarks, LidarScan& useableScan) {
+    int usablePointCount = 0;
+    for (LidarPoint& lp : scan.scan) {
+        if(isPointUseable(lp, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, xRange, yRange, landmarks.lines)) {
+            useableScan.scan.push_back(lp);
+            //printf("Usable Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
+            usablePointCount++;
         }
-        else dpd.appendPoint(lp.point() + estimatedPosition, GRAY, UNSUEABLE_LIDAR_POINT_POINT);
+    }
+    return usablePointCount;
+}
+
+optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& landmarks, const Vec2f& estimatedPosition) {
+    vector<Line> parallels;
+    for (auto lp : scan.scan) {
+        //printf("Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
+        if(lp.lmIndex == -1) continue; // Skip if no corresponding landmark (should not happen if all points are useable)
+
+        Vec2f normal = landmarks.lines[lp.lmIndex].normal();
+        Vec2f normalOpposite = normal * -1.0f;
+
+        float perpendicularDistance = lp.distance * fabs(lp.getDirection().dot(normal));
+        Line parallel1 = landmarks.lines[lp.lmIndex];
+        parallel1.start += normal * perpendicularDistance;
+        parallel1.end += normal * perpendicularDistance;
+
+        Line parallel2 = landmarks.lines[lp.lmIndex];
+        parallel2.start += normalOpposite * perpendicularDistance;
+        parallel2.end += normalOpposite * perpendicularDistance;
+
+        Vec2f point = landmarks.lines[lp.lmIndex].closestPointOnInfinite(estimatedPosition);
+        float fit1 = Vec2f::pointingTowards(point, normal, estimatedPosition);
+        float fit2 = Vec2f::pointingTowards(point, normalOpposite, estimatedPosition);
+        Line parallel;
+        if (fit1 > fit2) parallel = parallel1;
+        else parallel = parallel2;
+        dpd.appendLine(parallel, GREEN, SLAM_DEBUG_LINE);
+        //printf("Parallel line: start(%f, %f) end(%f, %f)\n", parallel.start.x, parallel.start.y, parallel.end.x, parallel.end.y);
+        parallels.push_back(parallel);
     }
     optional<Vec2f> deltaPosition = weightedAngleAverageSegmentIntersections(parallels);
     return deltaPosition;

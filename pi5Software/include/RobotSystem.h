@@ -1,9 +1,9 @@
 #pragma once
 
-#include "StateMachine.h"
-#include "State.h"
+#include <chrono>
+
 #include "lidar.h"
-#include "poseEstimation.h"
+#include "PoseEstimator.h"
 #include "LidarPoint.h"
 #include "Vec2f.h"
 #include "Graphics.h"
@@ -11,10 +11,10 @@
 #include "DisplayUserInterface.h"
 #include "GuidanceData.h"
 #include "guidance.h"
-#include "ServoControl.h"
 #include "sl_lidar_driver.h"
 #include "GpioController.h"
 #include "EncoderController.h"
+#include "Landmarks.h"
 
 class RobotSystem{
 	public:
@@ -22,29 +22,38 @@ class RobotSystem{
 	Graphics gp;
 	Visibility visibility;
 	DisplayUserInterface displayUI;
-			
+	std::thread guidanceThread;
+	std::chrono::high_resolution_clock::time_point initTime;
+	std::chrono::high_resolution_clock::time_point startTime;
+	PoseEstimator poseEstimator;
+	Landmarks landmarks;
 	GuidanceData guidanceData;
-	Vec2f estimatedPosition;
 	bool startActivated;
+
+	// Pose
+	float heading;
+	Vec2f position;
 
 	// Actuators
 	GpioController gpioController;
-	ServoControl steeringServo;
-	ServoControl motor;
 
 	// Sensors
 	sl::ILidarDriver* lidarDriver;
-	//EncoderController encoderController;
+	EncoderController encoderController;
 
-	RobotSystem()
-		: steeringServo(0,0,0),
-		  motor(0,0,0),
+	RobotSystem() :
 		  gpioController(),
-		  //encoderController(gpioController),
+		  encoderController(gpioController),
 		  gp(1000,1000, BLACK),
 		  displayUI(visibility),
 		  lidarDriver(nullptr),
-		  estimatedPosition(0.5f,0.5f),
-		  startActivated(false)
+		  landmarks(),
+		  poseEstimator(),
+		  guidanceThread(guidanceMain, ref(guidanceData)),
+		  startActivated(false),
+		  initTime(std::chrono::high_resolution_clock::now()),
+		  startTime(std::chrono::high_resolution_clock::now()),
+		  heading(0.0f),
+		  position(0.0f, 0.0f)
 	{}
 };

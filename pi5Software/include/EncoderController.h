@@ -13,8 +13,8 @@ extern "C" {
 
 #include "GpioController.h"
 
-#define WHEEL_CIRCUMFERENCE 	0.15f
-#define WHEEL_DISTANCE		0.105f
+#define WHEEL_CIRCUMFERENCE 	0.135f
+#define WHEEL_DISTANCE		0.102f
 #define LOWER_REVOLUTION_LIMIT 	90.0f
 #define UPPER_REVOLUTION_LIMIT 	270.0f
 
@@ -22,6 +22,7 @@ extern "C" {
 
 class EncoderController { 
 public:
+    GpioController& gpioController; 
     float angleLeftStart, angleRightStart;	
     int revolutionsLeft = 0;
     int revolutionsRight = 0;
@@ -30,15 +31,27 @@ public:
     float lastDistance = 0;
 
 public:
-    EncoderController(GpioController& gpioController) {
-        if(!grabData(angleLeftStart, angleRightStart, gpioController)) printf("Failed to grab initial encoder data\n");
+    EncoderController(GpioController& pGpioController) 
+        :   gpioController(pGpioController)
+    {
+        fd = open("/dev/i2c-1", O_RDWR);
+        if (fd < 0) {
+            perror("open failed");
+            return;
+        }
+        fdOpen = true;
+        if(!grabData(angleLeftStart, angleRightStart)) printf("Failed to grab initial encoder data\n");
     }
 
-    ~EncoderController() {}
+    ~EncoderController() {
+        if(fdOpen) {
+            close(fd);
+        }
+    }
 
-    int getEncodingData(float& deltaDistance, float& heading, GpioController& gpioController) {
+    int getEncodingData(float& deltaDistance, float& heading) {
         float angleLeft, angleRight;
-        if(!grabData(angleLeft, angleRight, gpioController)) return 0;
+        if(!grabData(angleLeft, angleRight)) return 0;
         angleLeft = normaliseAngle(angleLeft - angleLeftStart);
         angleRight = normaliseAngle(angleRight - angleRightStart);
         
@@ -56,11 +69,17 @@ public:
         heading = normaliseAngle(heading);
         deltaDistance = distance - lastDistance;
         
+        // Fix for this not being in radians
+        heading = heading * M_PI / 180.0f;
+
         lastAngleLeft = angleLeft;
         lastAngleRight = angleRight;
         lastDistance = distance;
         return 1;
     }
+
+    int fd;
+    bool fdOpen = false;
 
 private:
     float normaliseAngle(float angle){
@@ -68,20 +87,36 @@ private:
     }
 
     int dumbGrabData(float& angle){
-        int fd = open("/dev/i2c-1", O_RDWR);
-        ioctl(fd, I2C_SLAVE, AS5600_ADDR);
-        unsigned char buffer[2];
-        for(auto& c : buffer) {c = 0x00;}
+        if(!fdOpen) return 0;
+
+        if (ioctl(fd, I2C_SLAVE, AS5600_ADDR) < 0) {
+            perror("ioctl failed");
+            close(fd);
+            fdOpen = false;
+            return 0;
+        }
+
+        unsigned char buffer[2] = {0};
+
         int ret = i2c_smbus_read_i2c_block_data(fd, 0x0C, 2, buffer);
-        //printf("Ret: %d\n", ret);
-        if(ret != 2) return 0;
+        //printf("ret: %d\n", ret);
+
+        if(ret != 2) {
+            perror("i2c read failed");
+            close(fd);
+            fdOpen = false;
+            return 0;
+        }
+
         short rawAngle = buffer[0] << 8 | buffer[1];
-        rawAngle = rawAngle & 0b0000111111111111;
+        rawAngle &= 0x0FFF;
+
         angle = float(rawAngle) * 360.0f / 4096.0f;
+
         return 1;
     }
 
-    int grabData(float& angleLeft, float& angleRight, GpioController& gpioController){
+    int grabData(float& angleLeft, float& angleRight){
 		gpioController.disableSdaSwitch();
 		if(!dumbGrabData(angleLeft)) return 0;
 		gpioController.enableSdaSwitch();	

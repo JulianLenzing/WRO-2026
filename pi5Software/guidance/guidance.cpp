@@ -6,39 +6,58 @@
 /* user includes */
 #include <lgpio.h>
 #include "GuidanceData.h"
-#include "ServoControl.h"
+#include "PwmController.h"
 
-/* Steering Servo parameters */
+/* Steering servo and motor parameters */
 #define MAX_STEERING_ANGLE 45
+#define SERVO_DUTY_CYCLE_RANGE 1.0f
+#define MOTOR_DUTY_CYCLE_RANGE 1.0f
 
 using namespace std;
 
-float normaliseAngle(float angle) {
+static float normaliseAngle(float angle) {
     angle = fmodf(fmodf(angle, 2*M_PI) + 2*M_PI, 2*M_PI);
     return angle;
 }
 
-float correctSteering(float direction, float heading) {
+static float correctSteering(float direction, float heading) {
     float steeringAngle = direction - heading;
     steeringAngle = normaliseAngle(steeringAngle);
+    return steeringAngle;
 }
 
 void guidanceMain(GuidanceData& guidanceData)
 {
-    ServoControl sc(MAX_STEERING_ANGLE, 1.0f);
+    ServoController steering(0, MAX_STEERING_ANGLE, SERVO_DUTY_CYCLE_RANGE);
+	MotorController motor(1, MOTOR_DUTY_CYCLE_RANGE);
+    motor.unlockControl();
+    optional<Vec2f> currentWaypoint;
+    currentWaypoint.reset();
+    bool atWaypoint = false;
+
     while (guidanceData.getThreadStatus())
-    {
+    {        
         if(guidanceData.getGuidanceStatus()) {
-            optional<Vec2f> optWaypoint = guidanceData.getWaypoint();
-            if (optWaypoint.has_value())
+            // Check if we dont have a current waypoint and if a new one is available and try to get one from the queue
+            if (guidanceData.getWaypointCount() > 0 && !currentWaypoint.has_value())
             {
-                Vec2f waypoint = optWaypoint.value();
-                int count = guidanceData.getWaypointCount();
-                printf("Count: %d X: %.2f Y: %.2f\n", count, waypoint.x, waypoint.y);
+                optional<Vec2f> optWaypoint = guidanceData.getWaypoint();
+                if (optWaypoint.has_value())
+                {
+                    currentWaypoint = optWaypoint.value();
+                    cout << "Steering to new Waypoint: (" << currentWaypoint->x << ", " << currentWaypoint->y << ")" << endl;
+                }
             }
-            //sc.setAngle(3.1415);
+
+            // If we have a waypoint, calculate the steering angle and set the servo and motor accordingly
+            if(currentWaypoint.has_value()) {
+
+                if(0) currentWaypoint.reset(); // Placeholder for when we have a way to determine if we are at the waypoint
+            }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
+    steering.setMiddle();
+    motor.setSpeed(0);
 }
 

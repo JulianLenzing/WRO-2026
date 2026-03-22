@@ -10,8 +10,11 @@ target_include_directories( guidance PRIVATE
 )
 
 find_package(Threads REQUIRED)
+find_package(PiPCA9685 REQUIRED)
 
 target_link_libraries( guidance PUBLIC
     rt
     Threads::Threads
+	PiPCA9685::PiPCA9685
+	i2c
 )

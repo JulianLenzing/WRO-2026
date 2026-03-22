@@ -7,6 +7,12 @@ class StopState : public State{
   {
     // Stop sensors
     stopLidar(robot.lidarDriver);
+
+    // Stop other threads
+    robot.guidanceData.terminate();
+    if (robot.guidanceThread.joinable()) {
+    	robot.guidanceThread.join();
+    }
   }
 
   void update(RobotSystem& robot) override {

@@ -5,37 +5,62 @@
 #include <algorithm>
 #include <PiPCA9685/PCA9685.h>
 
-class ServoControl {
+class PwmController {
 public:
-    ServoControl(int pLine, float pAngleRange, float pDutyCycleRange = 1.0f)
+    PwmController(int pLine, float pDutyCycleRange = 1.0f)
     : line(pLine),
-    angleRange(pAngleRange),
     dutyCycleRange(pDutyCycleRange),
     pca("/dev/i2c-1", 0x40)
     {
         pca.set_pwm_freq(50.0);
     }
 
-    ~ServoControl() {
+    virtual ~PwmController() {
         setMs(1.5);
     }
     
-    void setAngle(float angle);
-    
+protected:
     void setMs(float ms){
         int off = int(ms/20.0f*4096.0f);
         pca.set_pwm(line, 0, off);
     }
 
-private:
     int line;
-    float angleRange;
     float dutyCycleRange;
     PiPCA9685::PCA9685 pca;
 };
 
+class MotorController : PwmController {
+public:
+    MotorController(int pLine, float pDutyCycleRange = 1.0f) 
+        : PwmController(pLine, pDutyCycleRange) {}
+        
+    void unlockControl() { setMs(1.5); }
+    void setSpeed(float speed) {
+        speed = std::clamp(speed, -1.0f, 1.0f);
+        float ms = 1.5f + speed * (dutyCycleRange / 2.0f);
+        setMs(ms);
+    } 
+};
+
+class ServoController : PwmController {
+public:
+    ServoController(int pLine, float pAngleRange, float pDutyCycleRange = 1.0f) 
+        : PwmController(pLine, pAngleRange), 
+          angleRange(pAngleRange)
+    {
+        setMs(1.5);
+    }
+
+    void setAngle(float angle) {} // Implementation to be added
+    void setMiddle() { setAngle(0.0f); }
+
+protected:
+    float angleRange;
+};
+
   /*
-void ServoControl::setAngle(float angle) {
+void ServoController::setAngle(float angle) {
 		float lowerBoundary = angleRange / 2.0f;
 		float upperBoundary = 2.0f*M_PI - (angleRange/2.0f);
 		if(angle <= 0.0f) angle = 0.0f;
@@ -58,7 +83,7 @@ void ServoControl::setAngle(float angle) {
 	}
 */
 /*
-void ServoControl::setAngle(float angle)
+void ServoController::setAngle(float angle)
 {
     float error = angle;
 

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "DisplayData.h"
+#include "Vec2f.h"
 
 using namespace std;
 
@@ -29,9 +30,8 @@ class DisplayUserInterface {
 
     // Interface state
     bool exit = false;
-    bool run = false;
-    int simulationSteps = 0;
-    int stepTime = 100;
+    Vec2f position = Vec2f(0.0f, 0.0f);
+    float heading = 0.0f;
 
     explicit DisplayUserInterface(Visibility& pVisibility) : visibility(pVisibility){
         // Create window with graphics context
@@ -44,6 +44,7 @@ class DisplayUserInterface {
         // Make context current
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1);
+        //glfwSetWindowPos(window, 0, 0); Only on X11
 
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
             std::cerr << "Failed to initialize GLAD\n";
@@ -99,13 +100,16 @@ class DisplayUserInterface {
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
         {
-            static float f = 0.0f;
-
             ImGui::Begin("Settings");
             ImGui::SeparatorText("General");
             if (ImGui::Button("Exit")) exit = true;
+            
+            ImGui::SeparatorText("Pose");
+            ImGui::Text("X: %.3f Y: %.3f m", position.x, position.y);
+            ImGui::Text("Heading: %3.2f degrees", heading / M_PI * 180);
+
+            /*
             ImGui::SeparatorText("Lidar");
             if (ImGui::TreeNode("Point visiblity"))
             {
@@ -136,7 +140,9 @@ class DisplayUserInterface {
 
                 ImGui::TreePop();
             }
+                */
 
+            /*
             ImGui::SeparatorText("Simulation");
             if (!run) {if (ImGui::Button("Start")){run = true;}}
             else if (ImGui::Button("Stop")){run = false;}
@@ -144,6 +150,7 @@ class DisplayUserInterface {
             if (ImGui::Button("Step")) simulationSteps++;
             ImGui::InputInt("Time per simulation step", &stepTime, 10, 100);
             stepTime = std::clamp(stepTime, 0, 1000);
+            */
 
             ImGui::SeparatorText("ImGui");
             ImGui::Checkbox("Show ImGUI Demo Window", &show_demo_window);      // Edit bools storing our window open/close state

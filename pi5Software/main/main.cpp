@@ -7,15 +7,6 @@
 #include "RobotSystem.h"
 #include "StateMachine.h"
 #include "State.h"
-#include "lidar.h"
-#include "poseEstimation.h"
-#include "LidarPoint.h"
-#include "Vec2f.h"
-#include "Graphics.h"
-#include "DisplayData.h"
-#include "DisplayUserInterface.h"
-#include "GuidanceData.h"
-#include "guidance.h"
 #include "InitState.h"
 #include "StartState.h"
 #include "RunCourseState.h"
@@ -50,6 +41,10 @@ enum MainState{
 };
 */
 
+#include "DisplayData.h"
+
+DisplayData dpd;
+
 int main(){
 	// Initialize GLFW
 	if (!initGLFW()) {std::cout<<"Could not initialise GLFW"<<std::endl; return 0;}
@@ -65,7 +60,6 @@ int main(){
 	StartState startState;
 	RunCourseState runCourseState;
 	StopState stopState;
-	//std::thread guidanceThread(guidanceMain, ref(robot.guidanceData));
 
 	sm.setState(&initState, robot);
 	sm.setState(&startState, robot);
@@ -78,15 +72,9 @@ int main(){
 	while(true){
 		sm.update(robot);
 		if(robot.displayUI.exit) break;
-		std::this_thread::sleep_for(std::chrono::milliseconds(110));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
 	sm.setState(&stopState, robot);
-
-	// Stop other threads
-	//guidanceData.terminate();
-	//if (guidanceThread.joinable()) {
-	//	guidanceThread.join();
-	//}
 	return 0;
 }

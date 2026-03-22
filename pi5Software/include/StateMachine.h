@@ -1,8 +1,10 @@
 #pragma once
 
 #include <iostream>
+#include <chrono>
 
 #include "State.h"
+#include "RobotSystem.h"
 
 class StateMachine
 {
@@ -18,7 +20,9 @@ public:
 
         if(current) 
         {
-			std::cout << "Entered new State: " << current->name() << std::endl;
+            std::chrono::milliseconds duration;
+            duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime);
+			std::cout << duration.count() << " ms - " << "Entered new State: " << current->name() << std::endl;
 			current->enter(robot);
 		}
     }

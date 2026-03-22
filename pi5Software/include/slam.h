@@ -9,6 +9,8 @@
 #include "Line.h"
 #include "LidarPoint.h"
 #include "DisplayData.h"
+#include "LidarPoint.h"
+#include "Landmarks.h"
 
 using namespace std;
 
@@ -17,13 +19,11 @@ struct intersectionIndexPair {
     Vec2f point;
 };
 
-void generateLandmarks(vector<Line>& lms);
-
 void generateTestPoints(vector<LidarPoint>& lidarPoints, const Vec2f& pos, const vector<Line>& lms,
     const float& angleNoiseStdDeg = 2.0f, const float& distanceNoiseStd = 0.2f, const int& rayCount = 50);
 
-bool isPointUseable(const Vec2f& xRange, const Vec2f& yRange, const Vec2f& dir, const vector<Line>& lms, size_t& landmark);
+int getUsablePoints(LidarScan scan, const Vec2f& xRange, const Vec2f& yRange, const Landmarks& landmarks, LidarScan& useableScan);
 
-optional<Vec2f> processLidarPoints(const vector<LidarPoint>& lidarPoints, const vector<Line>& lms, Vec2f estimatedPosition, Vec2f xRange, Vec2f yRange);
+optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& landmarks, const Vec2f& estimatedPosition);
 
 #endif //LINE_QUALITY_SLAM_H

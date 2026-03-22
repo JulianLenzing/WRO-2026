@@ -242,6 +242,10 @@ class Graphics {
         update(data.getDisplayLines(), data.getDisplayLinesColors(), data.getDisplayPoints(), data.getDisplayPointsColors());
     }
 
+    void setPosition(int x, int y) {
+        glfwMakeContextCurrent(window);
+        glfwSetWindowPos(window, x, y);
+    }
 };
 
 
