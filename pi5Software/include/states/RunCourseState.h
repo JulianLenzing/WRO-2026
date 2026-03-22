@@ -46,8 +46,12 @@ class RunCourseState : public State{
             lastEncoderUpdateTime = now;
             
             float deltaDistance;
-            robot.encoderController.getEncodingData(deltaDistance, robot.heading);
-            robot.position += Vec2f(cosf(robot.heading), sinf(robot.heading)) * deltaDistance;
+            float deltaHeading;
+            robot.encoderController.getEncodingData(deltaDistance, deltaHeading);
+            float midHeading = robot.heading + deltaHeading * 0.5f;
+            robot.position += Vec2f(cosf(midHeading), sinf(midHeading)) * deltaDistance;
+            robot.heading += deltaHeading;
+            robot.heading =  EncoderController::normaliseAngle(robot.heading);
 
             printf("---------Encoder--------------\n");
             printf("T1: %d ms T2: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count());

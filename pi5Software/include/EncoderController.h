@@ -13,22 +13,21 @@ extern "C" {
 
 #include "GpioController.h"
 
-#define WHEEL_CIRCUMFERENCE 	0.135f
-#define WHEEL_DISTANCE		0.102f
-#define LOWER_REVOLUTION_LIMIT 	90.0f
-#define UPPER_REVOLUTION_LIMIT 	270.0f
+#define WHEEL_CIRCUMFERENCE 	0.13274f
+#define WHEEL_DISTANCE		0.1f
 
 #define AS5600_ADDR 0x36
 
 class EncoderController { 
 public:
     GpioController& gpioController; 
-    float angleLeftStart, angleRightStart;	
     int revolutionsLeft = 0;
     int revolutionsRight = 0;
     float lastAngleLeft = 0;
     float lastAngleRight = 0;
     float lastDistance = 0;
+    float lastDistanceLeft = 0;
+    float lastDistanceRight = 0;
 
 public:
     EncoderController(GpioController& pGpioController) 
@@ -40,7 +39,7 @@ public:
             return;
         }
         fdOpen = true;
-        if(!grabData(angleLeftStart, angleRightStart)) printf("Failed to grab initial encoder data\n");
+        if(!grabData(lastAngleLeft, lastAngleRight)) printf("Failed to grab initial encoder data\n");
     }
 
     ~EncoderController() {
@@ -49,43 +48,40 @@ public:
         }
     }
 
-    int getEncodingData(float& deltaDistance, float& heading) {
-        float angleLeft, angleRight;
+    int getEncodingData(float& deltaDistance, float& deltaHeading) {
+        float angleLeft = 0;
+        float angleRight = 0;
         if(!grabData(angleLeft, angleRight)) return 0;
-        angleLeft = normaliseAngle(angleLeft - angleLeftStart);
-        angleRight = normaliseAngle(angleRight - angleRightStart);
         
-        if(lastAngleLeft > UPPER_REVOLUTION_LIMIT && angleLeft < LOWER_REVOLUTION_LIMIT) revolutionsLeft++;
-        if(lastAngleLeft < LOWER_REVOLUTION_LIMIT && angleLeft > UPPER_REVOLUTION_LIMIT) revolutionsLeft--;
+        // Handle wrap around and calculate revolutions
+        float deltaAngleLeft = angleLeft - lastAngleLeft;
+        if(deltaAngleLeft > M_PI) deltaAngleLeft -= 2.0f * M_PI;
+        else if(deltaAngleLeft < -M_PI) deltaAngleLeft += 2.0f * M_PI;
+        float deltaAngleRight = angleRight - lastAngleRight;
+        if(deltaAngleRight > M_PI) deltaAngleRight -= 2.0f * M_PI;
+        else if(deltaAngleRight < -M_PI) deltaAngleRight += 2.0f * M_PI;
         
-        if(lastAngleRight > UPPER_REVOLUTION_LIMIT && angleRight < LOWER_REVOLUTION_LIMIT) revolutionsRight++;
-        if(lastAngleRight < LOWER_REVOLUTION_LIMIT && angleRight > UPPER_REVOLUTION_LIMIT) revolutionsRight--;
+        float deltaDistanceLeft = WHEEL_CIRCUMFERENCE * deltaAngleLeft / (2.0f * M_PI);
+        float deltaDistanceRight = WHEEL_CIRCUMFERENCE * deltaAngleRight / (2.0f * M_PI);
         
-        float distanceLeft = WHEEL_CIRCUMFERENCE * (revolutionsLeft + angleLeft/360.0f);
-        float distanceRight = WHEEL_CIRCUMFERENCE * (revolutionsRight + angleRight/360.0f);
-        float distance = (distanceLeft + distanceRight) / 2;
-        
-        heading = (distanceRight - distanceLeft) / (WHEEL_DISTANCE * 2 * M_PI) * 360.0f;
-        heading = normaliseAngle(heading);
-        deltaDistance = distance - lastDistance;
-        
-        // Fix for this not being in radians
-        heading = heading * M_PI / 180.0f;
+        deltaDistance = (deltaDistanceLeft + deltaDistanceRight) * 0.5f;
+        deltaHeading = (deltaDistanceRight - deltaDistanceLeft) / WHEEL_DISTANCE;
 
         lastAngleLeft = angleLeft;
         lastAngleRight = angleRight;
-        lastDistance = distance;
+        lastDistanceLeft = deltaDistanceLeft;
+        lastDistanceRight = deltaDistanceRight;
         return 1;
     }
 
     int fd;
     bool fdOpen = false;
 
-private:
-    float normaliseAngle(float angle){
-        return fmodf(fmodf(angle, 360.0f) + 360.0f, 360.0f); 
+    static float normaliseAngle(float angle) {
+        return fmodf(fmodf(angle, 2.0f * M_PI) + 2.0f * M_PI, 2.0f * M_PI); 
     }
 
+private:
     int dumbGrabData(float& angle){
         if(!fdOpen) return 0;
 
@@ -111,17 +107,26 @@ private:
         short rawAngle = buffer[0] << 8 | buffer[1];
         rawAngle &= 0x0FFF;
 
-        angle = float(rawAngle) * 360.0f / 4096.0f;
-
+        angle = float(rawAngle) * 2.0f * M_PI / 4096.0f;
+        angle = normaliseAngle(angle);
         return 1;
     }
 
     int grabData(float& angleLeft, float& angleRight){
+        float angleLeft1 = 0.0f;
+        float angleLeft2 = 0.0f;
 		gpioController.disableSdaSwitch();
-		if(!dumbGrabData(angleLeft)) return 0;
+		if(!dumbGrabData(angleLeft1)) return 0;
 		gpioController.enableSdaSwitch();	
 		if(!dumbGrabData(angleRight)) return 0;
-		angleRight = 360.0f - angleRight;
+        gpioController.disableSdaSwitch();
+		if(!dumbGrabData(angleLeft2)) return 0;
+		angleLeft = atan2f(
+            sinf(angleLeft1) + sinf(angleLeft2),
+            cosf(angleLeft1) + cosf(angleLeft2)
+        ); // Average the two readings to reduce bias; Wrap around exists so this complicated form is needed
+
+		angleRight = 2.0f * M_PI - angleRight;
 		return 1;
     }
 };
