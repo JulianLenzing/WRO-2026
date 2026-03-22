@@ -49,17 +49,20 @@ class ServoController : PwmController {
 public:
     ServoController(int pLine, float pAngleRange, float pDutyCycleRange = 1.0f) // Angles in radians
         : PwmController(pLine, pDutyCycleRange), 
-          angleRange(pAngleRange),
-          minDutyCycle(1.5f - (pDutyCycleRange / 2.0f)),
-          maxDutyCycle(1.5f + (pDutyCycleRange / 2.0f)),
-          minAngle(2.0f*M_PI - (pAngleRange/2.0f)),
-          maxAngle(pAngleRange/2.0f)
+        angleRange(pAngleRange),
+        minDutyCycle(1.5f - (pDutyCycleRange / 2.0f)),
+        maxDutyCycle(1.5f + (pDutyCycleRange / 2.0f)),
+        minAngle(2.0f*M_PI - (pAngleRange/2.0f)),
+        maxAngle(pAngleRange/2.0f),
+        inverted(false),
+        currentAngle(0.0f)
     {
         setMs(1.5);
     }
 
     void setAngle(float angle) {
-        if(inverted) angle = 2.0f*M_PI - angle;
+        currentAngle = angle;
+        if(inverted) angle = 2.0f*M_PI - angle; // Invert angle if needed
         angle = normaliseAngle(angle);
         if(angle <= M_PI && angle > maxAngle) {
             angle = maxAngle;            
@@ -81,6 +84,8 @@ public:
         }
     } 
 
+    float getAngle() const { return currentAngle; }
+
     void setMiddle() { setAngle(0.0f); }
 
     void invert(){
@@ -94,8 +99,8 @@ protected:
         return ret;
     }
 
-    bool inverted = false;
-
+    bool inverted;
+    float currentAngle;
     float angleRange;
     float minDutyCycle;
     float maxDutyCycle;
