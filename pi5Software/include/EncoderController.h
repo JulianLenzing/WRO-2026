@@ -21,11 +21,8 @@ extern "C" {
 class EncoderController { 
 public:
     GpioController& gpioController; 
-    int revolutionsLeft = 0;
-    int revolutionsRight = 0;
     float lastAngleLeft = 0;
     float lastAngleRight = 0;
-    float lastDistance = 0;
     float lastDistanceLeft = 0;
     float lastDistanceRight = 0;
 
@@ -46,6 +43,13 @@ public:
         if(fdOpen) {
             close(fd);
         }
+    }
+
+    int reset() {
+        if(!grabData(lastAngleLeft, lastAngleRight)) {printf("Failed to grab encoder data to reset\n"); return 0;}
+        float lastDistanceLeft = 0;
+        float lastDistanceRight = 0;
+        return 1;
     }
 
     int getEncodingData(float& deltaDistance, float& deltaHeading) {
