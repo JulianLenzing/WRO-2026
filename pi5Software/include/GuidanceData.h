@@ -21,9 +21,10 @@ class GuidanceData
 
     float steeringAngle;
     float throttle;
+    Vec2f currentWaypoint;
 
     public:
-    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f) {}
+    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f), currentWaypoint(-1, -1) {}
 
     void start() {
         std::lock_guard<std::mutex> lock(mtx);
@@ -89,7 +90,12 @@ class GuidanceData
         }
         std::optional<Vec2f> optWaypoint = waypoints.front();
         waypoints.pop();
+        currentWaypoint = optWaypoint.value();
         return optWaypoint;
+    }
+
+    Vec2f lookAtCurrentWaypoint() {
+        return currentWaypoint;
     }
 
     size_t getWaypointCount()

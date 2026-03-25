@@ -126,6 +126,9 @@ class RunCourseState : public State{
                 cout << "Position estimation failed, keeping previous estimate." << endl;
             }
 
+            // As they waypoint has to be displayed on the OpenGL window this needs to be pulled here            
+            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint(), MAGENTA, STANDARD_POINT);
+
             robot.gp.update(dpd);
         }
 
@@ -151,7 +154,11 @@ class RunCourseState : public State{
             robot.displayUI.heading = robot.heading;
             robot.displayUI.steeringAngle = steeringAngle;
             robot.displayUI.throttle = throttle;
+
+            robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint();            
+
             robot.displayUI.update();
+
             dpd.updateVisibility(robot.visibility);	
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));

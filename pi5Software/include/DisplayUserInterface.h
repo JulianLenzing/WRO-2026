@@ -29,11 +29,13 @@ class DisplayUserInterface {
     Visibility& visibility;
 
     // Interface state
+    bool start = false;
     bool exit = false;
     Vec2f position = Vec2f(0.0f, 0.0f);
     float heading = 0.0f;
     float steeringAngle = 0.0f;
     float throttle = 0.0f;
+    Vec2f currentWaypoint = Vec2f(-1, -1);
 
     explicit DisplayUserInterface(Visibility& pVisibility) : visibility(pVisibility){
         // Create window with graphics context
@@ -105,12 +107,15 @@ class DisplayUserInterface {
         {
             ImGui::Begin("Settings");
             ImGui::SeparatorText("General");
+            if (ImGui::Button("Start")) start = true;
+            ImGui::SameLine();
             if (ImGui::Button("Exit")) exit = true;
             
             ImGui::SeparatorText("Pose");
             ImGui::Text("X: %.3f Y: %.3f m", position.x, position.y);
             ImGui::Text("Heading: %3.2f degrees", heading / M_PI * 180);
             ImGui::SeparatorText("Guidance");
+            ImGui::Text("Current waypoint - X: %.2f Y: %.2f m", currentWaypoint.x, currentWaypoint.y);
             ImGui::Text("Steering angle: %3.2f degrees", steeringAngle / M_PI * 180);
             ImGui::Text("Throttle: %3.2f", throttle);
 
