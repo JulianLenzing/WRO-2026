@@ -6,7 +6,8 @@
 #include "RobotSystem.h"
 #include "slam.h"
 
-#define LIDAR_TAU 1.0f
+#define LIDAR_POSITION_TAU 1.0f
+#define LIDAR_HEADING_TAU 1.0f
 
 void writeLidarScanToFile(const LidarScan& scan, const std::string& filename)
 {
@@ -34,7 +35,7 @@ class RunCourseState : public State{
         lastGuidanceUpdateTime = std::chrono::high_resolution_clock::now();
         lastUIUpdateTime = std::chrono::high_resolution_clock::now();   
 
-        robot.position = Vec2f(1.5f, 0.5f);
+        robot.position = Vec2f(0.5f, 0.5f);
         robot.heading = 0.0f;
 
         robot.guidanceData.appendWaypoint(Vec2f(2.0f, 0.5f));
@@ -87,11 +88,27 @@ class RunCourseState : public State{
             
             LidarScan lidarScan;
             getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
+            lidarScan.rotate(robot.heading); // Rotate scan to align with robot's heading
+            float beginningHeading = robot.heading;
 
             LidarScan useableScan;
             getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);
+
+            std::optional<float> maybeNewEstimatedHeading = lidarEstimateHeading(useableScan, robot.landmarks, robot.position);            
+             if(maybeNewEstimatedHeading.has_value()) {
+                float error = maybeNewEstimatedHeading.value();
+                float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_HEADING_TAU);
+                robot.heading += error * (1.0f - alpha);
+                robot.heading = EncoderController::normaliseAngle(robot.heading);
+                useableScan.rotate(robot.heading-beginningHeading);
+                cout << "Lidar heading: " << maybeNewEstimatedHeading.value() / M_PI * 180 << " degrees" << endl;
+            }
+            else {
+                cout << "Heading estimation failed, keeping previous estimate." << endl;
+            }
             for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
             for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + robot.position, BLUE, USEABLE_LIDAR_POINT_POINT);}
+
 
             auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.landmarks, robot.position);
 
@@ -99,14 +116,14 @@ class RunCourseState : public State{
                 Vec2f error = maybeNewEstimatedPosition.value() - robot.position;
                 dpd.appendPoint(maybeNewEstimatedPosition.value(), YELLOW, NEW_ESTIMATED_POSITION_POINT);
 
-                float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_TAU);
+                float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_POSITION_TAU);
                 robot.position += error * (1.0f - alpha);
                 robot.position = boundPosition(robot.position, robot.landmarks);
 
-                cout << "Position: " << robot.position.x << ", " << robot.position.y << " m, Heading: " << robot.heading / M_PI * 180 << " degrees" << endl;
+                cout << "Lidar position: " << maybeNewEstimatedPosition.value().x << ", " << maybeNewEstimatedPosition.value().y << " m" << endl;
             }
             else {
-                cout << "Pose estimation failed, keeping previous estimate." << endl;
+                cout << "Position estimation failed, keeping previous estimate." << endl;
             }
 
             robot.gp.update(dpd);

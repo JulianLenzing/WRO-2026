@@ -8,6 +8,8 @@
 #define MIN_POINT_DISTANCE 0.18f
 #define MAX_POINT_DISTANCE 3.65f
 #define MAX_DELTA_POSITION 0.2f
+#define MIN_POINTS_FOR_LINE 35
+#define MAX_LINE_DEVIATION 0.349f// Atmost pi/2
 
 using namespace std;
 
@@ -212,6 +214,110 @@ int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Landmarks& la
         }
     }
     return usablePointCount;
+}
+
+Line linearRegression(const vector<Vec2f>& points) {
+    if (points.size() < 2)
+        return Line();
+
+    // --- 1. Compute centroid ---
+    Vec2f centroid(0.0f, 0.0f);
+    for (const auto& p : points) {
+        centroid.x += p.x;
+        centroid.y += p.y;
+    }
+    centroid.x /= points.size();
+    centroid.y /= points.size();
+
+    // --- 2. Compute covariance matrix ---
+    float Sxx = 0.0f, Syy = 0.0f, Sxy = 0.0f;
+
+    for (const auto& p : points) {
+        float dx = p.x - centroid.x;
+        float dy = p.y - centroid.y;
+
+        Sxx += dx * dx;
+        Syy += dy * dy;
+        Sxy += dx * dy;
+    }
+
+    // --- 3. Compute principal direction ---
+    // Solve eigenvector of covariance matrix
+    float theta = 0.5f * atan2f(2.0f * Sxy, Sxx - Syy);
+
+    Vec2f direction(cosf(theta), sinf(theta));
+
+    // --- 4. Create line through centroid ---
+    Vec2f p1 = centroid - direction;
+    Vec2f p2 = centroid + direction;
+
+    return Line(p1, p2);
+}
+
+optional<float> compareLines(const Line& a, const Line& b) {
+    Vec2f dirA = a.direction();
+    Vec2f dirB = b.direction();
+
+    // Ensure lines are oriented the right way, since they can be treated as running in two directions
+    if(dirA.x < 0) dirA = dirA * -1;
+    if(dirB.x < 0) dirB = dirB * -1;
+
+    float lenA = dirA.length();
+    float lenB = dirB.length();
+
+    if (lenA == 0.0f || lenB == 0.0f) {
+        //printf("Line rejected because of lenght\n");
+        return std::nullopt;
+    }
+
+    // Normalize directions
+    dirA = dirA * (1.0f / lenA);
+    dirB = dirB * (1.0f / lenB);
+
+    // Compute signed angle using atan2(cross, dot)
+    float cross = dirA.x * dirB.y - dirA.y * dirB.x;
+    float dot   = dirA.x * dirB.x + dirA.y * dirB.y;
+
+    float angle = atan2f(cross, dot); // Range: (-π, π)
+
+    // Reject nearly orthogonal lines
+    if (fabs(angle) >= MAX_LINE_DEVIATION) {
+        //printf("Line rejected because of angle: %.2f\n", angle);
+        //printf("Line a: S - X: %.2f Y %.2f E - X: %.2f Y %.2f Line Line b: S - X: %.2f Y %.2f E - X: %.2f Y %.2f\n", a.start.x, a.start.y, a.end.x, a.end.y, b.start.x, b.start.y, b.end.x, b.end.y);
+        return std::nullopt;
+    }
+
+    return angle; // Already in (-π/2, π/2)
+}
+
+optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& landmarks, Vec2f estimatedPosition) { // Position is only here for debugging and or visualisation
+    float angleSum = 0.0f;
+    int count = 0;
+    for(int i = 0; i < landmarks.lines.size(); i++) {
+        vector<Vec2f> points;
+        for(const LidarPoint& lp : scan.scan) {
+            if(lp.lmIndex != -1) {
+                if(lp.lmIndex == i) {
+                    points.push_back(lp.point());
+                }
+            }
+        }
+        //printf("Lm: %d Point Count: %d\n", i, points.size());
+        if(points.size() >= MIN_POINTS_FOR_LINE) {
+            Line line = linearRegression(points);
+            Line absLine = Line(line.start+estimatedPosition, line.end+estimatedPosition);
+            dpd.appendLine(absLine, GRAY, SLAM_DEBUG_LINE);
+            optional<float> angle = compareLines(landmarks.lines[i], line);
+            if(angle.has_value()) {
+                angleSum += angle.value();
+                count++;
+                dpd.appendLine(absLine, BLUE, SLAM_DEBUG_LINE);
+            }
+            //else printf("Angle has no value!\n");
+        }
+    }
+    if(count == 0) return std::nullopt;
+    return -angleSum / float(count); // - to convert from landmark-to-scan angle to robot heading error angle
 }
 
 optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& landmarks, const Vec2f& estimatedPosition) {

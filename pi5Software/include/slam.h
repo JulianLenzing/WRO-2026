@@ -24,6 +24,8 @@ void generateTestPoints(vector<LidarPoint>& lidarPoints, const Vec2f& pos, const
 
 int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Landmarks& landmarks, LidarScan& useableScan);
 
+optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& landmarks, Vec2f estimatedPosition);
+
 optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& landmarks, const Vec2f& estimatedPosition);
 
 #endif //LINE_QUALITY_SLAM_H
