@@ -1,9 +1,13 @@
+#include <cmath>
+#include <algorithm>
+
 #include "slam.h"
 #include "LidarPoint.h"
 #include "Landmarks.h"
 
-#define MIN_POINT_DISTANCE 0.3f
+#define MIN_POINT_DISTANCE 0.18f
 #define MAX_POINT_DISTANCE 3.65f
+#define MAX_DELTA_POSITION 0.2f
 
 using namespace std;
 
@@ -125,7 +129,7 @@ void generateTestPoints(
     }
 }
 
-bool isPointUseable(LidarPoint& lp, float minDistance, float maxDistance, const Vec2f& xRange, const Vec2f& yRange, const vector<Line>& lms) {
+bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Landmarks lms) {
     bool isPointUseable = true;
     
     // Minimum and maximum distance check
@@ -135,18 +139,32 @@ bool isPointUseable(LidarPoint& lp, float minDistance, float maxDistance, const 
     Vec2f dir = lp.getDirection();
     constexpr int size = 4;
     Vec2f maxPos[size];
+    Vec2f xRange(estimatedPosition.x - MAX_DELTA_POSITION, estimatedPosition.x + MAX_DELTA_POSITION);
+    Vec2f yRange(estimatedPosition.y - MAX_DELTA_POSITION, estimatedPosition.y + MAX_DELTA_POSITION);
     maxPos[0] = Vec2f(xRange.x,yRange.x);
     maxPos[1] = Vec2f(xRange.x,yRange.y);
     maxPos[2] = Vec2f(xRange.y,yRange.y);
     maxPos[3] = Vec2f(xRange.y,yRange.x);
+
+    for(auto& p : maxPos) {
+        // Clamp to within landmark boundaries to avoid out of bounds errors in intersection calculation
+        p.x = clamp(p.x, lms.outerBottomLeft.x + 0.001f, lms.outerTopRight.x - 0.001f);
+        p.y = clamp(p.y, lms.outerBottomLeft.y + 0.001f, lms.outerTopRight.y - 0.001f);
+
+        if(p.x > lms.innerBottomLeft.x && p.x < lms.innerTopRight.x && p.y > lms.innerBottomLeft.y && p.y < lms.innerTopRight.y) {
+            // If the point is within the inner square it is not useable as it cannot be uniquely assigned to a landmark
+            p = estimatedPosition; // Set to estimated position so it does not affect intersection calculation but also does not cause out of bounds errors
+        }
+        //dpd.appendPoint(p, GREEN, SLAM_DEBUG_POINT);
+    }
 
     int correspondingIndex[size];
     for (int i = 0; i < sizeof(maxPos) / sizeof(Vec2f); i++) {
         Line line(maxPos[i], Vec2f(maxPos[i].x + dir.x * 1000, maxPos[i].y + dir.y * 1000));
         //displayLines.push_back(line);
         vector<intersectionIndexPair> intersections;
-        for (int j = 0; j < lms.size(); j++) {
-            optional<Vec2f> p = Line::intersectionSegment(line, lms[j]);
+        for (int j = 0; j < lms.lines.size(); j++) {
+            optional<Vec2f> p = Line::intersectionSegment(line, lms.lines[j]);
             if (p) {
                 intersections.push_back(intersectionIndexPair(j, p.value()));
             }
@@ -163,6 +181,8 @@ bool isPointUseable(LidarPoint& lp, float minDistance, float maxDistance, const 
             }
             correspondingIndex[i] = closestIntersection.index;
             //cout << "Point on Landmark: " << closestIntersection.index << endl;
+            //dpd.appendPoint(closestIntersection.point, RED, SLAM_DEBUG_POINT);
+            //dpd.appendLine(Line(maxPos[i], closestIntersection.point), RED, SLAM_DEBUG_LINE);
         }
         else {
             correspondingIndex[i] = -1;
@@ -176,15 +196,16 @@ bool isPointUseable(LidarPoint& lp, float minDistance, float maxDistance, const 
             //printf("Inconsistent corresponding landmark indices: %d and %d on index %d\n", correspondingIndex[i-1], correspondingIndex[i], i);
         }
     }
-    if (isPointUseable) lp.lmIndex = correspondingIndex[0];
+    if (isPointUseable) lp.lmIndex = correspondingIndex[0]; 
+    
     //printf("Index: %d\n", lp.lmIndex);
     return isPointUseable;
 }
 
-int getUsablePoints(LidarScan scan, const Vec2f& xRange, const Vec2f& yRange, const Landmarks& landmarks, LidarScan& useableScan) {
+int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Landmarks& landmarks, LidarScan& useableScan) {
     int usablePointCount = 0;
     for (LidarPoint& lp : scan.scan) {
-        if(isPointUseable(lp, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, xRange, yRange, landmarks.lines)) {
+        if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, landmarks)) {
             useableScan.scan.push_back(lp);
             //printf("Usable Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
             usablePointCount++;

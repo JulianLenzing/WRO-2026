@@ -22,16 +22,12 @@
 
 using namespace std;
 
-#define MAX_DELTA_POSITION 0.2f
-
 class PoseEstimator {
 public:
     int update(LidarScan scan, Landmarks landmarks, Vec2f estimatedPosition, Vec2f& newEstimatedPosition) {    
-        Vec2f xRange(estimatedPosition.x + MAX_DELTA_POSITION, estimatedPosition.x - MAX_DELTA_POSITION);
-        Vec2f yRange(estimatedPosition.y + MAX_DELTA_POSITION, estimatedPosition.y - MAX_DELTA_POSITION);
         LidarScan useableScan;
-        getUsablePoints(scan, xRange, yRange, landmarks, useableScan);
-        for(const auto& lp : scan.scan) {dpd.appendPoint(lp.point() + estimatedPosition, GRAY, UNSUEABLE_LIDAR_POINT_POINT);}
+        getUsablePoints(scan, estimatedPosition, landmarks, useableScan);
+        for(const auto& lp : scan.scan) {dpd.appendPoint(lp.point() + estimatedPosition, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
         for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + estimatedPosition, BLUE, USEABLE_LIDAR_POINT_POINT);}
 
         auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, landmarks, estimatedPosition);

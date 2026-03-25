@@ -14,7 +14,7 @@ extern "C" {
 #include "GpioController.h"
 
 #define WHEEL_CIRCUMFERENCE 	0.13274f
-#define WHEEL_DISTANCE		0.1f
+#define WHEEL_DISTANCE		0.09863f
 
 #define AS5600_ADDR 0x36
 
@@ -66,6 +66,19 @@ public:
         
         deltaDistance = (deltaDistanceLeft + deltaDistanceRight) * 0.5f;
         deltaHeading = (deltaDistanceRight - deltaDistanceLeft) / WHEEL_DISTANCE;
+
+        // --- EMA smoothing ---
+        static float smoothedDeltaDistance = 0.0f;
+        static float smoothedDeltaHeading  = 0.0f;
+        const float alphaDistance = 0.2f; // 0.0-1.0, smaller = smoother
+        const float alphaHeading  = 0.2f; // 0.0-1.0, smaller = smoother
+
+        smoothedDeltaDistance = alphaDistance * deltaDistance + (1.0f - alphaDistance) * smoothedDeltaDistance;
+        smoothedDeltaHeading  = alphaHeading  * deltaHeading  + (1.0f - alphaHeading)  * smoothedDeltaHeading;
+
+        // --- Return smoothed values ---
+        deltaDistance = smoothedDeltaDistance;
+        deltaHeading  = smoothedDeltaHeading;
 
         lastAngleLeft = angleLeft;
         lastAngleRight = angleRight;

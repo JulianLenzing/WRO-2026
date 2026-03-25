@@ -16,7 +16,15 @@ class GuidanceData
     bool runGuidance = false;
     bool runThread = true;
 
+    Vec2f position;
+    float heading;
+
+    float steeringAngle;
+    float throttle;
+
     public:
+    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f) {}
+
     void start() {
         std::lock_guard<std::mutex> lock(mtx);
         runGuidance = true;
@@ -25,6 +33,30 @@ class GuidanceData
     void stop() {
         std::lock_guard<std::mutex> lock(mtx);
         runGuidance = false;
+    }
+
+    void setRobotData(Vec2f pos, float head) {
+        std::lock_guard<std::mutex> lock(mtx);
+        position = pos;
+        heading = head;
+    }
+
+    void getRobotData(Vec2f& pos, float& head) {
+        std::lock_guard<std::mutex> lock(mtx);
+        pos = position;
+        head = heading;
+    }
+
+    void setUiData(float pSteeringAngle, float pThrottle) {
+        std::lock_guard<std::mutex> lock(mtx);
+        steeringAngle = pSteeringAngle;
+        throttle = pThrottle;
+    }
+
+    void getUiData(float& pSteeringAngle, float& pThrottle) {
+        std::lock_guard<std::mutex> lock(mtx);
+        pSteeringAngle = steeringAngle;
+        pThrottle = throttle;
     }
     
     bool getGuidanceStatus() {

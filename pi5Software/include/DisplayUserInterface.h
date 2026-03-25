@@ -32,6 +32,8 @@ class DisplayUserInterface {
     bool exit = false;
     Vec2f position = Vec2f(0.0f, 0.0f);
     float heading = 0.0f;
+    float steeringAngle = 0.0f;
+    float throttle = 0.0f;
 
     explicit DisplayUserInterface(Visibility& pVisibility) : visibility(pVisibility){
         // Create window with graphics context
@@ -69,7 +71,7 @@ class DisplayUserInterface {
         // Setup scaling
         ImGuiStyle& style = ImGui::GetStyle();
         style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-        style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+        style.FontScaleDpi = main_scale*1.7f;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
         // Setup Platform/Renderer backends
         ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -108,6 +110,9 @@ class DisplayUserInterface {
             ImGui::SeparatorText("Pose");
             ImGui::Text("X: %.3f Y: %.3f m", position.x, position.y);
             ImGui::Text("Heading: %3.2f degrees", heading / M_PI * 180);
+            ImGui::SeparatorText("Guidance");
+            ImGui::Text("Steering angle: %3.2f degrees", steeringAngle / M_PI * 180);
+            ImGui::Text("Throttle: %3.2f", throttle);
 
             /*
             ImGui::SeparatorText("Lidar");
