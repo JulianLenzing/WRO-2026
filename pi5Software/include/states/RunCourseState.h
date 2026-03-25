@@ -4,6 +4,7 @@
 
 #include "State.h"
 #include "RobotSystem.h"
+#include "slam.h"
 
 #define LIDAR_TAU 1.0f
 
@@ -51,6 +52,7 @@ class RunCourseState : public State{
         std::chrono::high_resolution_clock::time_point now =
         std::chrono::high_resolution_clock::now();
 
+        /*----------Encoder-loop---------*/
         std::chrono::milliseconds EncoderDt = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEncoderUpdateTime);
         if (EncoderDt >= std::chrono::milliseconds(10)) {
             lastEncoderUpdateTime = now;
@@ -71,6 +73,7 @@ class RunCourseState : public State{
             cout << "Position: " << robot.position.x << ", " << robot.position.y << " m, Heading: " << robot.heading / M_PI * 180 << " degrees" << endl;
         }
 
+        /*----------Lidar-loop---------*/
         std::chrono::milliseconds lidarDt = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLidarUpdateTime);
         if (lidarDt >= std::chrono::milliseconds(105)) {
             lastLidarUpdateTime = now;
@@ -84,14 +87,17 @@ class RunCourseState : public State{
             
             LidarScan lidarScan;
             getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
-            writeLidarScanToFile(lidarScan, "lidar_scan.txt");
-            lidarScan.rotate(robot.heading); // Rotate scan to align with heading
-            writeLidarScanToFile(lidarScan, "lidar_scan_rotated.txt");
 
-            Vec2f newLidarEstimatedPosition(robot.position);
-            if(robot.poseEstimator.update(lidarScan, robot.landmarks, robot.position, newLidarEstimatedPosition)) {
-                Vec2f error = newLidarEstimatedPosition - robot.position;
-                dpd.appendPoint(newLidarEstimatedPosition, YELLOW, NEW_ESTIMATED_POSITION_POINT);
+            LidarScan useableScan;
+            getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);
+            for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
+            for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + robot.position, BLUE, USEABLE_LIDAR_POINT_POINT);}
+
+            auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.landmarks, robot.position);
+
+            if(maybeNewEstimatedPosition.has_value()) {
+                Vec2f error = maybeNewEstimatedPosition.value() - robot.position;
+                dpd.appendPoint(maybeNewEstimatedPosition.value(), YELLOW, NEW_ESTIMATED_POSITION_POINT);
 
                 float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_TAU);
                 robot.position += error * (1.0f - alpha);
@@ -106,6 +112,7 @@ class RunCourseState : public State{
             robot.gp.update(dpd);
         }
 
+        /*----------Guidance-loop---------*/
         std::chrono::milliseconds guidanceDt = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUIUpdateTime);
         if(guidanceDt >= std::chrono::milliseconds(50)) {
             lastGuidanceUpdateTime = now;
@@ -115,6 +122,7 @@ class RunCourseState : public State{
             if(0) robot.guidanceData.appendWaypoint(Vec2f(2.5, 0.5)); // Placeholder for when we have a way to determine new waypoints
         }
 
+        /*----------UI-loop---------*/
         std::chrono::milliseconds uIDt = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUIUpdateTime);
         if (uIDt >= std::chrono::milliseconds(500)) {
             lastUIUpdateTime = now;

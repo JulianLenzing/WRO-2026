@@ -25,7 +25,6 @@ class RobotSystem{
 	std::thread guidanceThread;
 	std::chrono::high_resolution_clock::time_point initTime;
 	std::chrono::high_resolution_clock::time_point startTime;
-	PoseEstimator poseEstimator;
 	Landmarks landmarks;
 	GuidanceData guidanceData;
 	bool startActivated;
