@@ -3,7 +3,6 @@
 #include <chrono>
 
 #include "lidar.h"
-#include "PoseEstimator.h"
 #include "LidarPoint.h"
 #include "Vec2f.h"
 #include "Graphics.h"
@@ -47,7 +46,6 @@ class RobotSystem{
 		  displayUI(visibility),
 		  lidarDriver(nullptr),
 		  landmarks(),
-		  poseEstimator(),
 		  guidanceThread(guidanceMain, ref(guidanceData)),
 		  startActivated(false),
 		  initTime(std::chrono::high_resolution_clock::now()),
