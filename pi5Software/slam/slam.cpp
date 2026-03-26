@@ -257,16 +257,17 @@ Line linearRegression(const vector<Vec2f>& points) {
 optional<float> compareLines(const Line& a, const Line& b) {
     Vec2f dirA = a.direction();
     Vec2f dirB = b.direction();
+    Vec2f dirBR = dirB * -1.0f;
 
-    // Ensure lines are oriented the right way, since they can be treated as running in two directions
-    if(dirA.x < 0) dirA = dirA * -1;
-    if(dirB.x < 0) dirB = dirB * -1;
+    printf("DirA - X: %.2f Y: %.2f DirB - X: %.2f Y: %.2f\n", dirA.x, dirA.y, dirB.x, dirB.y);
 
     float lenA = dirA.length();
     float lenB = dirB.length();
+    
+    printf("lenA: %.2f lenB: %.2f\n", lenA, lenB);
 
-    if (lenA == 0.0f || lenB == 0.0f) {
-        //printf("Line rejected because of lenght\n");
+    if (lenA < 1e-6f || lenB < 1e-6f) {
+        printf("Line rejected because of lenght\n");
         return std::nullopt;
     }
 
@@ -274,20 +275,31 @@ optional<float> compareLines(const Line& a, const Line& b) {
     dirA = dirA * (1.0f / lenA);
     dirB = dirB * (1.0f / lenB);
 
-    // Compute signed angle using atan2(cross, dot)
-    float cross = dirA.x * dirB.y - dirA.y * dirB.x;
-    float dot   = dirA.x * dirB.x + dirA.y * dirB.y;
+    float angleA = atan2f(dirA.y, dirA.x);
+    if(angleA > M_PI/2.0f) angleA -= M_PI;
+    if(angleA < -M_PI/2.0f) angleA += M_PI;
+    
+    float angleB = atan2f(dirB.y, dirB.x);
+    float angleBR = atan2f(dirBR.y, dirBR.x);
 
-    float angle = atan2f(cross, dot); // Range: (-π, π)
+    printf("A: %.2f B: %.2f BR: %.2f\n", angleA, angleB, angleBR);
+
+    float angleDiffNormal = angleB - angleA;
+    float angleDiffReversed = angleBR - angleA;
+    
+    float angleDiff;
+    if(fabs(angleDiffNormal) < fabs(angleDiffReversed)) angleDiff = angleDiffNormal;
+    else angleDiff = angleDiffReversed;
+    printf("AngleDiff: %.2f\n", angleDiff);
 
     // Reject nearly orthogonal lines
-    if (fabs(angle) >= MAX_LINE_DEVIATION) {
-        //printf("Line rejected because of angle: %.2f\n", angle);
-        //printf("Line a: S - X: %.2f Y %.2f E - X: %.2f Y %.2f Line Line b: S - X: %.2f Y %.2f E - X: %.2f Y %.2f\n", a.start.x, a.start.y, a.end.x, a.end.y, b.start.x, b.start.y, b.end.x, b.end.y);
+    if (fabs(angleDiff) >= 0.349f) {
+        printf("Line rejected because of angle: %.2f\n", angleDiff);
+        printf("Line a: S - X: %.2f Y %.2f E - X: %.2f Y %.2f Line Line b: S - X: %.2f Y %.2f E - X: %.2f Y %.2f\n", a.start.x, a.start.y, a.end.x, a.end.y, b.start.x, b.start.y, b.end.x, b.end.y);
         return std::nullopt;
     }
 
-    return angle; // Already in (-π/2, π/2)
+    return angleDiff; 
 }
 
 optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& landmarks, Vec2f estimatedPosition) { // Position is only here for debugging and or visualisation
@@ -302,7 +314,7 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& lan
                 }
             }
         }
-        //printf("Lm: %d Point Count: %d\n", i, points.size());
+        printf("Lm: %d Point Count: %d\n", i, points.size());
         if(points.size() >= MIN_POINTS_FOR_LINE) {
             Line line = linearRegression(points);
             Line absLine = Line(line.start+estimatedPosition, line.end+estimatedPosition);
@@ -313,7 +325,7 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& lan
                 count++;
                 dpd.appendLine(absLine, BLUE, SLAM_DEBUG_LINE);
             }
-            //else printf("Angle has no value!\n");
+            else printf("Angle has no value!\n");
         }
     }
     if(count == 0) return std::nullopt;
