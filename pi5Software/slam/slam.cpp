@@ -259,15 +259,15 @@ optional<float> compareLines(const Line& a, const Line& b) {
     Vec2f dirB = b.direction();
     Vec2f dirBR = dirB * -1.0f;
 
-    printf("DirA - X: %.2f Y: %.2f DirB - X: %.2f Y: %.2f\n", dirA.x, dirA.y, dirB.x, dirB.y);
+    //printf("DirA - X: %.2f Y: %.2f DirB - X: %.2f Y: %.2f\n", dirA.x, dirA.y, dirB.x, dirB.y);
 
     float lenA = dirA.length();
     float lenB = dirB.length();
     
-    printf("lenA: %.2f lenB: %.2f\n", lenA, lenB);
+    //printf("lenA: %.2f lenB: %.2f\n", lenA, lenB);
 
     if (lenA < 1e-6f || lenB < 1e-6f) {
-        printf("Line rejected because of lenght\n");
+        //printf("Line rejected because of lenght\n");
         return std::nullopt;
     }
 
@@ -278,11 +278,11 @@ optional<float> compareLines(const Line& a, const Line& b) {
     float angleA = atan2f(dirA.y, dirA.x);
     if(angleA > M_PI/2.0f) angleA -= M_PI;
     if(angleA < -M_PI/2.0f) angleA += M_PI;
-    
+
     float angleB = atan2f(dirB.y, dirB.x);
     float angleBR = atan2f(dirBR.y, dirBR.x);
 
-    printf("A: %.2f B: %.2f BR: %.2f\n", angleA, angleB, angleBR);
+    //printf("A: %.2f B: %.2f BR: %.2f\n", angleA, angleB, angleBR);
 
     float angleDiffNormal = angleB - angleA;
     float angleDiffReversed = angleBR - angleA;
@@ -290,12 +290,12 @@ optional<float> compareLines(const Line& a, const Line& b) {
     float angleDiff;
     if(fabs(angleDiffNormal) < fabs(angleDiffReversed)) angleDiff = angleDiffNormal;
     else angleDiff = angleDiffReversed;
-    printf("AngleDiff: %.2f\n", angleDiff);
+    //printf("AngleDiff: %.2f\n", angleDiff);
 
     // Reject nearly orthogonal lines
-    if (fabs(angleDiff) >= 0.349f) {
-        printf("Line rejected because of angle: %.2f\n", angleDiff);
-        printf("Line a: S - X: %.2f Y %.2f E - X: %.2f Y %.2f Line Line b: S - X: %.2f Y %.2f E - X: %.2f Y %.2f\n", a.start.x, a.start.y, a.end.x, a.end.y, b.start.x, b.start.y, b.end.x, b.end.y);
+    if (fabs(angleDiff) >= MAX_LINE_DEVIATION) {
+        //printf("Line rejected because of angle: %.2f\n", angleDiff);
+        //printf("Line a: S - X: %.2f Y %.2f E - X: %.2f Y %.2f Line Line b: S - X: %.2f Y %.2f E - X: %.2f Y %.2f\n", a.start.x, a.start.y, a.end.x, a.end.y, b.start.x, b.start.y, b.end.x, b.end.y);
         return std::nullopt;
     }
 
@@ -314,7 +314,7 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& lan
                 }
             }
         }
-        printf("Lm: %d Point Count: %d\n", i, points.size());
+        //printf("Lm: %d Point Count: %d\n", i, points.size());
         if(points.size() >= MIN_POINTS_FOR_LINE) {
             Line line = linearRegression(points);
             Line absLine = Line(line.start+estimatedPosition, line.end+estimatedPosition);
