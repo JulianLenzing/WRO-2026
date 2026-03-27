@@ -12,9 +12,9 @@
 #define MAX_STEERING_ANGLE (M_PI/2.0f) 
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
-#define MAX_THROTTLE 0.4f
+#define MAX_THROTTLE 1.0f
 #define MIN_THROTTLE 0.1f
-#define ACCELERATION_CONSTANT 4.0f
+#define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
 
 /* Guidance parameters */
 #define WAYPOINT_THRESHOLD 0.1f
@@ -62,8 +62,9 @@ void guidanceMain(GuidanceData& guidanceData)
                 steering.setAngle(direction-heading);
 
                 // Throttle is proportional to distance but capped at MAX_THROTTLE and at minimum MIN_THROTTLE to ensure the robot keeps moving
-                float throttle = clamp(distance * ACCELERATION_CONSTANT, MIN_THROTTLE, MAX_THROTTLE);
+                float throttle = clamp(distance / ACCELERATION_CONSTANT * MAX_THROTTLE, MIN_THROTTLE, MAX_THROTTLE);
                 motor.setThrottle(throttle);
+                //printf("Distance %.2f Throttle %.2f\n", distance, throttle);
 
                 // Send values to UI
                 guidanceData.setUiData(steering.getAngle(), motor.getThrottle());
@@ -71,10 +72,15 @@ void guidanceMain(GuidanceData& guidanceData)
                 // Check if we are at the waypoint and if so reset the current waypoint to get the next one from the queue
                 if(distance < WAYPOINT_THRESHOLD) currentWaypoint.reset(); 
             }
+            else {
+                /* Lock steering and stop motor if no current waypoint is set*/
+                steering.setMiddle();
+                motor.setThrottle(0.0f);
+            }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     steering.setMiddle();
-    motor.setThrottle(0);
+    motor.setThrottle(0.0f);
 }
 
