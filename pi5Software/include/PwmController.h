@@ -38,6 +38,10 @@ public:
         : PwmController(pLine, pDutyCycleRange),
         currentThrottle(0.0f)
         {}
+
+    ~MotorController(){
+        setThrottle(0.0f);
+    }
         
     void unlockControl() { setMs(1.5); }
     void setThrottle(float pThrottle) {
@@ -65,7 +69,11 @@ public:
         inverted(false),
         currentAngle(0.0f)
     {
-        setMs(1.5);
+        setMs(1.5f);
+    }
+
+    ~ServoController(){
+        setMs(1.5f);
     }
 
     void setAngle(float angle) {
