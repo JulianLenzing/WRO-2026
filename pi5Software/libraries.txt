@@ -1,0 +1,9 @@
+The software uses various libraries including:
+- Linux system library
+- OpenGL
+- glfw
+- glad
+- Dear ImGui
+- The official rplidar sdk
+- PCA9685 library: https://github.com/barulicm/PiPCA9685
+- libgpiod
