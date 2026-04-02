@@ -29,7 +29,7 @@ void guidanceMain(GuidanceData& guidanceData)
     steering.setMiddle();
     motor.unlockControl();
 
-    optional<Vec2f> currentWaypoint;
+    optional<Waypoint> currentWaypoint;
     currentWaypoint.reset();
     bool atWaypoint = false;
     float heading = 0;
@@ -44,21 +44,20 @@ void guidanceMain(GuidanceData& guidanceData)
             // Check if we dont have a current waypoint and if a new one is available and try to get one from the queue
             if (guidanceData.getWaypointCount() > 0 && !currentWaypoint.has_value())
             {
-                optional<Vec2f> optWaypoint = guidanceData.getWaypoint();
-                if (optWaypoint.has_value())
+                currentWaypoint = guidanceData.getWaypoint();
+                if (currentWaypoint.has_value())
                 {
-                    currentWaypoint = optWaypoint.value();
-                    cout << "Steering to new Waypoint: (" << currentWaypoint->x << ", " << currentWaypoint->y << ")" << endl;
+                    cout << "Steering to new Waypoint: (" << currentWaypoint->point.x << ", " << currentWaypoint->point.y << ")" << endl;
                 }
             }
 
             // If we have a waypoint, calculate the steering angle and set the servo and motor accordingly
             if(currentWaypoint.has_value()) {
                 // Get distance to waypoint
-                float distance = Vec2f(currentWaypoint.value() - position).length();
+                float distance = Vec2f(currentWaypoint.value().point - position).length();
 
                 // Set steering and throttle
-                float direction = atan2f(currentWaypoint.value().y - position.y, currentWaypoint.value().x - position.x);
+                float direction = atan2f(currentWaypoint.value().point.y - position.y, currentWaypoint.value().point.x - position.x);
                 steering.setAngle(direction-heading);
 
                 // Throttle is proportional to distance but capped at MAX_THROTTLE and at minimum MIN_THROTTLE to ensure the robot keeps moving

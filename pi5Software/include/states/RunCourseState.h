@@ -7,7 +7,7 @@
 #include "slam.h"
 
 #define LIDAR_POSITION_TAU 1.0f
-#define LIDAR_HEADING_TAU 1.0f
+#define LIDAR_HEADING_TAU 0.4f
 
 void writeLidarScanToFile(const LidarScan& scan, const std::string& filename)
 {
@@ -35,17 +35,31 @@ class RunCourseState : public State{
         lastGuidanceUpdateTime = std::chrono::high_resolution_clock::now();
         lastUIUpdateTime = std::chrono::high_resolution_clock::now();   
 
-        robot.position = Vec2f(0.5f, 0.5f);
+        robot.position = Vec2f(1.0f, 0.25f);
         robot.heading = 0.0f;
 
-        robot.guidanceData.appendWaypoint(Vec2f(2.0f, 0.5f));
-        robot.guidanceData.appendWaypoint(Vec2f(2.5f, 1.0f));
-        robot.guidanceData.appendWaypoint(Vec2f(2.5f, 2.0f));
-        robot.guidanceData.appendWaypoint(Vec2f(2.0f, 2.5f));
-        robot.guidanceData.appendWaypoint(Vec2f(1.0f, 2.5f));
-        robot.guidanceData.appendWaypoint(Vec2f(0.5f, 2.0f));
-        robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.0f));
-        robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.5f));
+        for(int i = 0; i < 3; i++) {
+            
+            robot.guidanceData.appendWaypoint(Vec2f(2.0f, 0.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(2.5f, 1.0f));
+            robot.guidanceData.appendWaypoint(Vec2f(2.5f, 2.0f));
+            robot.guidanceData.appendWaypoint(Vec2f(2.0f, 2.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(1.0f, 2.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 2.0f));
+            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.0f));
+            robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.5f));
+            /*
+            robot.guidanceData.appendWaypoint(Vec2f(1.5f, 0.25f));
+            robot.guidanceData.appendWaypoint(Vec2f(1.75f, 0.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(1.75f, 1.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(1.5f, 1.75f));
+            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.75f));
+            robot.guidanceData.appendWaypoint(Vec2f(0.25f, 1.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(0.25f, 0.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 0.25f));
+            */
+        }
+        //robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.25f));
     }
 
     void update(RobotSystem& robot) override
@@ -98,8 +112,10 @@ class RunCourseState : public State{
              if(maybeNewEstimatedHeading.has_value()) {
                 float error = maybeNewEstimatedHeading.value();
                 float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_HEADING_TAU);
+                alpha = 0.0f;
                 robot.heading += error * (1.0f - alpha);
                 robot.heading = EncoderController::normaliseAngle(robot.heading);
+                printf("Error: %.2f Alpha: %.2f Added Heading: %.2f\n", error, alpha, error * (1.0f-alpha));
                 useableScan.rotate(robot.heading-beginningHeading);
                 cout << "Lidar heading: " << maybeNewEstimatedHeading.value() / M_PI * 180 << " degrees" << endl;
             }
@@ -125,9 +141,6 @@ class RunCourseState : public State{
             else {
                 cout << "Position estimation failed, keeping previous estimate." << endl;
             }
-
-            // As they waypoint has to be displayed on the OpenGL window this needs to be pulled here            
-            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint(), MAGENTA, STANDARD_POINT);
 
             robot.gp.update(dpd);
         }
@@ -155,11 +168,13 @@ class RunCourseState : public State{
             robot.displayUI.steeringAngle = steeringAngle;
             robot.displayUI.throttle = throttle;
 
-            robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint();            
+            robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint().point;            
 
             robot.displayUI.update();
 
             dpd.updateVisibility(robot.visibility);	
+            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA, STANDARD_POINT);
+            robot.gp.update(dpd);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }

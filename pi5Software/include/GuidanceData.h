@@ -7,12 +7,13 @@
 #include <optional>
 
 #include "Vec2f.h"
+#include "Waypoint.h"
 
 class GuidanceData
 {
     private:
     std::mutex mtx;
-    std::queue<Vec2f> waypoints{};
+    std::queue<Waypoint> waypoints{};
     bool runGuidance = false;
     bool runThread = true;
 
@@ -21,10 +22,10 @@ class GuidanceData
 
     float steeringAngle;
     float throttle;
-    Vec2f currentWaypoint;
+    Waypoint currentWaypoint;
 
     public:
-    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f), currentWaypoint(-1, -1) {}
+    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f), currentWaypoint(Vec2f(-1, -1)) {}
 
     void start() {
         std::lock_guard<std::mutex> lock(mtx);
@@ -75,26 +76,26 @@ class GuidanceData
         return runThread;
     }
     
-    void appendWaypoint(Vec2f waypoint)
+    void appendWaypoint(Waypoint waypoint)
     {
         std::lock_guard<std::mutex> lock(mtx);
         waypoints.push(waypoint);
     }
 
-    std::optional<Vec2f> getWaypoint()
+    std::optional<Waypoint> getWaypoint()
     {
         std::lock_guard<std::mutex> lock(mtx);
         if (waypoints.empty())
         {
             return std::nullopt;
         }
-        std::optional<Vec2f> optWaypoint = waypoints.front();
+        std::optional<Waypoint> optWaypoint = waypoints.front();
         waypoints.pop();
         currentWaypoint = optWaypoint.value();
         return optWaypoint;
     }
 
-    Vec2f lookAtCurrentWaypoint() {
+    Waypoint lookAtCurrentWaypoint() {
         return currentWaypoint;
     }
 
