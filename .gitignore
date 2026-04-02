@@ -3,6 +3,8 @@
 *.xml
 *.iml
 *.pack
+.idea/
+.vscode/
 build/
 
 /pi5Software/lib/*
