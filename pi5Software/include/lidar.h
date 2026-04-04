@@ -5,6 +5,7 @@
 #include "sl_lidar_driver.h"
 #include "LidarPoint.h"
 
+sl::ILidarDriver* initLidar();
 int startLidar(sl::ILidarDriver* drv);
 int getLidarScan(sl::ILidarDriver* drv, LidarScan& scan, float scale = 1.0f, float subtractor = 0);
 void stopLidar(sl::ILidarDriver* drv);

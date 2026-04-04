@@ -4,21 +4,16 @@
 // Public
 PwmController::PwmController(int pLine, float pDutyCycleRange)
 : line(pLine),
-dutyCycleRange(pDutyCycleRange),
-pca("/dev/i2c-1", 0x40)
+dutyCycleRange(pDutyCycleRange)
 {
-    pca.set_pwm_freq(50.0);
 }
 
 PwmController::~PwmController() {
-    setMs(1.5);
 }
 
 // Protected
 void PwmController::setMs(float ms){
-    ms = std::clamp(ms, 1.5f - dutyCycleRange / 2.0f, 1.5f + dutyCycleRange / 2.0f);
-    int off = int(ms/20.0f*4096.0f);
-    pca.set_pwm(line, 0, off);
+    return;
 }
 
 /*Subclass MotorController*/
@@ -37,8 +32,7 @@ void MotorController::unlockControl() { setMs(1.5); }
 void MotorController::setThrottle(float pThrottle) {
     pThrottle = std::clamp(pThrottle, -1.0f, 1.0f);
     currentThrottle = pThrottle;
-    float ms = 1.5f + pThrottle * (dutyCycleRange / 2.0f);
-    setMs(ms);
+    
 } 
 
 float MotorController::getThrottle() const { return currentThrottle; }
@@ -55,11 +49,11 @@ ServoController::ServoController(int pLine, float pAngleRange, float pDutyCycleR
     inverted(false),
     currentAngle(0.0f)
 {
-    setMs(1.5f);
+    setMiddle();
 }
 
 ServoController::~ServoController(){
-    setMs(1.5f);
+    setMiddle();
 }
 
 void ServoController::setAngle(float angle) {
@@ -72,24 +66,11 @@ void ServoController::setAngle(float angle) {
     else if(angle > M_PI && angle < minAngle) {
         angle = minAngle;
     }
-
-    if(angle <= M_PI) {
-        float ms = 1.5f - (angle / (angleRange/2.0f)) * (dutyCycleRange / 2.0f);
-        ms = std::clamp(ms, minDutyCycle, maxDutyCycle);
-        setMs(ms); 
-    }
-    else {
-        float inverseAngle = 2.0f*M_PI - angle;
-        float ms = 1.5f + (inverseAngle / (angleRange/2.0f)) * (dutyCycleRange / 2.0f);
-        ms = std::clamp(ms, minDutyCycle, maxDutyCycle);
-        setMs(ms);            
-    }
 }    
 
 float ServoController::getAngle() const { return currentAngle; }
 
 void ServoController::setMiddle() { setAngle(0.0f); }
-
 
 void ServoController::invert(){
     inverted = !inverted;

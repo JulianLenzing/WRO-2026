@@ -50,6 +50,10 @@ static inline void delay_ms(sl_word_size_t ms){
 
 using namespace sl;
 
+sl::ILidarDriver* initLidar() {
+    return *sl::createLidarDriver();
+}
+
 int startLidar(ILidarDriver * drv) {
 	const char *opt_channel = NULL;
     const char *opt_channel_param_first = "/dev/ttyAMA0";

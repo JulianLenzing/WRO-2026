@@ -2,11 +2,12 @@
 
 #include "State.h"
 #include "gpioControl.h"
+#include "lidar.h"
 
 class InitState : public State{
 	void enter(RobotSystem& robot) override
     {
-        robot.lidarDriver = *sl::createLidarDriver();
+        robot.lidarDriver = initLidar();
         if(!robot.lidarDriver) printf("Lidar driver not initialized\n");
         robot.displayUI.update();
         //robot.gp.setPosition(800, 0); Only on X11 

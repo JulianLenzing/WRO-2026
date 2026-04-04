@@ -16,7 +16,9 @@ protected:
 
     int line;
     float dutyCycleRange;
-    PiPCA9685::PCA9685 pca;
+    #ifndef NO_PCA9685 
+    PiPCA9685::PCA9685 pca; 
+    #endif
 };
 
 class MotorController : public PwmController {
