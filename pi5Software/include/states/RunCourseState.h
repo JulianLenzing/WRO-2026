@@ -39,7 +39,7 @@ class RunCourseState : public State{
         robot.heading = 0.0f;
 
         for(int i = 0; i < 3; i++) {
-            
+            /*
             robot.guidanceData.appendWaypoint(Vec2f(2.0f, 0.5f));
             robot.guidanceData.appendWaypoint(Vec2f(2.5f, 1.0f));
             robot.guidanceData.appendWaypoint(Vec2f(2.5f, 2.0f));
@@ -48,7 +48,7 @@ class RunCourseState : public State{
             robot.guidanceData.appendWaypoint(Vec2f(0.5f, 2.0f));
             robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.0f));
             robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.5f));
-            /*
+            */
             robot.guidanceData.appendWaypoint(Vec2f(1.5f, 0.25f));
             robot.guidanceData.appendWaypoint(Vec2f(1.75f, 0.5f));
             robot.guidanceData.appendWaypoint(Vec2f(1.75f, 1.5f));
@@ -57,9 +57,9 @@ class RunCourseState : public State{
             robot.guidanceData.appendWaypoint(Vec2f(0.25f, 1.5f));
             robot.guidanceData.appendWaypoint(Vec2f(0.25f, 0.5f));
             robot.guidanceData.appendWaypoint(Vec2f(0.5f, 0.25f));
-            */
+            
         }
-        //robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.25f));
+        robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.25f));
     }
 
     void update(RobotSystem& robot) override
@@ -142,6 +142,8 @@ class RunCourseState : public State{
                 cout << "Position estimation failed, keeping previous estimate." << endl;
             }
 
+            dpd.updateVisibility(robot.visibility);	
+            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA, STANDARD_POINT);
             robot.gp.update(dpd);
         }
 
@@ -167,14 +169,9 @@ class RunCourseState : public State{
             robot.displayUI.heading = robot.heading;
             robot.displayUI.steeringAngle = steeringAngle;
             robot.displayUI.throttle = throttle;
-
             robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint().point;            
 
             robot.displayUI.update();
-
-            dpd.updateVisibility(robot.visibility);	
-            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA, STANDARD_POINT);
-            robot.gp.update(dpd);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
