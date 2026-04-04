@@ -4,11 +4,7 @@ project(main)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Debug)
 
-add_subdirectory(../glad ${CMAKE_BINARY_DIR}/glad-build)
-add_subdirectory(../lidar ${CMAKE_BINARY_DIR}/lidar-build)
-add_subdirectory(../slam ${CMAKE_BINARY_DIR}/slam-build)
 add_subdirectory(../guidance ${CMAKE_BINARY_DIR}/guidance-build)
-add_subdirectory(../gpioControl ${CMAKE_BINARY_DIR}/gpioControl-build)
 
 set(IMGUI_SRC
     ../lib/imgui/imgui.cpp
@@ -23,14 +19,24 @@ set(IMGUI_SRC
 add_executable(main
 	main.cpp
 	${IMGUI_SRC}
+	../src/glad.c
+	../src/lidar.cpp
+	../src/slam.cpp
+	../src/gpioControl.cpp
+
+	../src/EncoderController.cpp
+	../src/PwmController.cpp
+	../src/GpioController.cpp
 )
 
 target_include_directories( main PUBLIC
 	../include
+	../include/include
 	../include/states
 	../lib/imgui
 	../lib/imgui/backends
 	../lib/glfw
+	../lib/rplidar_sdk/sdk/include
 	${LIBGPIOD_INCLUDE_DIRS}
 )
 
@@ -40,12 +46,11 @@ pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
 find_package(PiPCA9685 REQUIRED)
 
 target_link_libraries(main PRIVATE 
-	glad
-	lidar
-	slam
+	${CMAKE_SOURCE_DIR}/../lib/glfw/libglfw3.a
+	OpenGL::GL
+	${CMAKE_SOURCE_DIR}/../lib/rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a
 	PiPCA9685::PiPCA9685
 	guidance
 	${LIBGPIOD_LIBRARIES}
-	gpioControl
 	i2c
 )
