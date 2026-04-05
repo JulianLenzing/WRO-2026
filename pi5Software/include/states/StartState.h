@@ -10,7 +10,7 @@ class StartState : public State{
     {
 		if(robot.gpioController.queryButton()) robot.startActivated = true;
 		robot.displayUI.update();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     
     void exit(RobotSystem& robot) override 
@@ -20,8 +20,9 @@ class StartState : public State{
 		// Start Lidar
 		startLidar(robot.lidarDriver);
 
-		// Init Encoder angle
+		// Init other sensors
 		robot.encoderController.reset();
+		robot.gyro.reset();
 		
 		// Start guidance
 		robot.guidanceData.start();

@@ -14,6 +14,7 @@
 #include "GpioController.h"
 #include "EncoderController.h"
 #include "Landmarks.h"
+#include "Gyro.h"
 
 class RobotSystem{
 	public:
@@ -38,10 +39,12 @@ class RobotSystem{
 	// Sensors
 	sl::ILidarDriver* lidarDriver;
 	EncoderController encoderController;
+	Gyro gyro;
 
 	RobotSystem() :
 		  gpioController(),
 		  encoderController(gpioController),
+		  gyro(),
 		  gp(1000,1000, BLACK),
 		  displayUI(visibility),
 		  lidarDriver(nullptr),

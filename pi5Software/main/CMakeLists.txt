@@ -52,6 +52,7 @@ if(NOT SIMULATION)
 		../src/EncoderController.cpp
 		../src/PwmController.cpp
 		../src/GpioController.cpp
+		../src/Gyro.cpp
 
 		# Files not needed in a simulation build
 		../src/gpioControl.cpp
