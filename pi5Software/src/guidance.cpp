@@ -13,7 +13,7 @@
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
 #define MAX_THROTTLE 1.0f
-#define MIN_THROTTLE 0.1f
+#define MIN_THROTTLE 0.2f
 #define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
 
 /* Guidance parameters */
@@ -61,7 +61,13 @@ void guidanceMain(GuidanceData& guidanceData)
                 steering.setAngle(direction-heading);
 
                 // Throttle is proportional to distance but capped at MAX_THROTTLE and at minimum MIN_THROTTLE to ensure the robot keeps moving
-                float throttle = clamp(distance / ACCELERATION_CONSTANT * MAX_THROTTLE, MIN_THROTTLE, MAX_THROTTLE);
+                float throttle = clamp(distance / ACCELERATION_CONSTANT * (MAX_THROTTLE - MIN_THROTTLE), MIN_THROTTLE, MAX_THROTTLE);
+
+                // Throttle is capped at MAX_THROTTLE and MIN_THROTTLE and is reduced at large steering angles
+                float currentAbsoluteSteeringAngle = steering.getAngle();
+                if(currentAbsoluteSteeringAngle > M_PI) currentAbsoluteSteeringAngle = 2*M_PI - currentAbsoluteSteeringAngle;
+                throttle = clamp(float(throttle - (currentAbsoluteSteeringAngle / MAX_STEERING_ANGLE * (MAX_THROTTLE - MIN_THROTTLE))), MIN_THROTTLE, MAX_THROTTLE);
+
                 motor.setThrottle(throttle);
                 //printf("Distance %.2f Throttle %.2f\n", distance, throttle);
 

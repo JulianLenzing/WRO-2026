@@ -63,7 +63,6 @@ ServoController::~ServoController(){
 }
 
 void ServoController::setAngle(float angle) {
-    currentAngle = angle;
     if(inverted) angle = 2.0f*M_PI - angle; // Invert angle if needed
     angle = normaliseAngle(angle);
     if(angle <= M_PI && angle > maxAngle) {
@@ -72,6 +71,7 @@ void ServoController::setAngle(float angle) {
     else if(angle > M_PI && angle < minAngle) {
         angle = minAngle;
     }
+    currentAngle = angle;
 
     if(angle <= M_PI) {
         float ms = 1.5f - (angle / (angleRange/2.0f)) * (dutyCycleRange / 2.0f);
