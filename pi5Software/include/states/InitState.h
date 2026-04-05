@@ -15,7 +15,7 @@ class InitState : public State{
         robot.gp.update(dpd);
 
 		robot.visibility.setLineVisibility(SLAM_DEBUG_LINE, true);
-        robot.startTime = std::chrono::high_resolution_clock::now();
+        robot.initTime = std::chrono::high_resolution_clock::now();
     }
 
     void update(RobotSystem& robot) override
