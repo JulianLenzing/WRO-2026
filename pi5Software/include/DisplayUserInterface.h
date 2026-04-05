@@ -36,6 +36,11 @@ class DisplayUserInterface {
     float steeringAngle = 0.0f;
     float throttle = 0.0f;
     Vec2f currentWaypoint = Vec2f(-1, -1);
+    // Status of the sensors
+    bool encoderStatus = false;
+    bool gyroStatus = false;
+    bool lidarPositionStatus = false;
+    bool lidarHeadingStatus = false;
 
     explicit DisplayUserInterface(Visibility& pVisibility) : visibility(pVisibility){
         // Create window with graphics context
@@ -82,6 +87,11 @@ class DisplayUserInterface {
         for (auto& b : items) {b=true;}
     }
     
+    ImVec4 boolToColor(bool b) {
+        if(b) return ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+        else return ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
+    }
+
     void update() {
         if(!window) {cout<<"Warning no GLFW window!"<<std::endl; return;}
         if(!imguiContext) {cout<<"Warning No ImGui context!"<<std::endl; return;}
@@ -118,6 +128,12 @@ class DisplayUserInterface {
             ImGui::Text("Current waypoint - X: %.2f Y: %.2f m", currentWaypoint.x, currentWaypoint.y);
             ImGui::Text("Steering angle: %3.2f degrees", steeringAngle / M_PI * 180);
             ImGui::Text("Throttle: %3.2f", throttle);
+
+            ImGui::SeparatorText("Status");
+            ImGui::TextColored(boolToColor(encoderStatus), "Encoder status");
+            ImGui::TextColored(boolToColor(gyroStatus), "Gyro status");
+            ImGui::TextColored(boolToColor(lidarPositionStatus), "LiDAR position status");
+            ImGui::TextColored(boolToColor(lidarHeadingStatus), "LiDAR heading status");
 
             /*
             ImGui::SeparatorText("Lidar");
