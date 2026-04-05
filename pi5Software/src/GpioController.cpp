@@ -13,11 +13,11 @@ GpioController::GpioController() {
 }
 
 GpioController::~GpioController(){
-    gpiod_line_request_release(led1_request);
-    gpiod_line_request_release(led2_request);
-    gpiod_line_request_release(sda_switch_request);
-    gpiod_line_request_release(scl_switch_request);
-    gpiod_line_request_release(button_request);
+    if(led1_request)        gpiod_line_request_release(led1_request);
+    if(led2_request)        gpiod_line_request_release(led2_request);
+    if(sda_switch_request)  gpiod_line_request_release(sda_switch_request);
+    if(scl_switch_request)  gpiod_line_request_release(scl_switch_request);
+    if(button_request)      gpiod_line_request_release(button_request);
 }
 
 int GpioController::queryButton() {
