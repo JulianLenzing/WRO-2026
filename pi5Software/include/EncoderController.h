@@ -17,6 +17,7 @@ extern "C" {
 #define WHEEL_DISTANCE		0.09863f
 
 #define AS5600_ADDR 0x36
+#define MAX_GRAB_RETRIES 3
 
 class EncoderController { 
 public:
@@ -35,8 +36,10 @@ public:
     
 private:    
     int fd;
-    bool fdOpen = false;
+    bool fdUseable = false;
 
     int dumbGrabData(float& angle);
     int grabData(float& angleLeft, float& angleRight);
+    int retryingGrabData(float& angle);
+    void busyWaitMicroseconds(int us);
 };

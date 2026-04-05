@@ -31,3 +31,7 @@ int EncoderController::dumbGrabData(float& angle) {
 int EncoderController::grabData(float& angleLeft, float& angleRight) {
     return 1;
 }
+
+int EncoderController::retryingGrabData(float& angle) {return;}
+
+void EncoderController::busyWaitMicroseconds(int us) {return;}
