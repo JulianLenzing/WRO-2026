@@ -6,6 +6,11 @@
 #include "RobotSystem.h"
 
 class StartState : public State{
+	void enter(RobotSystem& robot) override 
+	{
+		robot.gpioController.setLed1High();
+	}
+
     void update(RobotSystem& robot) override
     {
 		if(robot.gpioController.queryButton()) robot.startActivated = true;
@@ -15,6 +20,7 @@ class StartState : public State{
     
     void exit(RobotSystem& robot) override 
     {
+		robot.gpioController.setLed2High();
 		robot.startTime = std::chrono::high_resolution_clock::now();
 
 		// Start Lidar

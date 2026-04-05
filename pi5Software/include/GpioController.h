@@ -15,6 +15,8 @@ public:
     GpioController();
     ~GpioController();
 
+    void setLed1High();
+    void setLed2High();
     int queryButton();
     void enableSdaSwitch();
     void disableSdaSwitch();

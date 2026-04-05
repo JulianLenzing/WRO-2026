@@ -6,6 +6,10 @@ GpioController::GpioController() {
 GpioController::~GpioController(){
 }
 
+void GpioController::setLed1High() {return;}
+
+void GpioController::setLed2High() {return;}
+
 int GpioController::queryButton() {
     return 1;
 }
