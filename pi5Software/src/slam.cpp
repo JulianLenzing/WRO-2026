@@ -5,9 +5,13 @@
 #include "LidarPoint.h"
 #include "Landmarks.h"
 
-#define MIN_POINT_DISTANCE 0.18f
-#define MAX_POINT_DISTANCE 3.65f
-#define MAX_DELTA_POSITION 0.2f
+// Requirements for points to be valid
+#define MIN_POINT_DISTANCE      0.18f
+#define MAX_POINT_DISTANCE      3.65f
+#define MAX_DELTA_POSITION      0.2f
+#define MAX_DISTANCE_DEVIATION  0.25f
+
+// Requirements for points to form a line
 #define MIN_POINTS_FOR_LINE 35
 #define MAX_LINE_DEVIATION 0.349f// Atmost pi/2
 
@@ -132,8 +136,6 @@ void generateTestPoints(
 }
 
 bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Landmarks lms) {
-    bool isPointUseable = true;
-    
     // Minimum and maximum distance check
     if(lp.distance <= minDistance || lp.distance >= maxDistance) return false;
     
@@ -160,10 +162,12 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
         //dpd.appendPoint(p, GREEN, SLAM_DEBUG_POINT);
     }
 
+    // Check if the same landmark is hit at all possible position (approximated as 4)
     int correspondingIndex[size];
     for (int i = 0; i < sizeof(maxPos) / sizeof(Vec2f); i++) {
         Line line(maxPos[i], Vec2f(maxPos[i].x + dir.x * 1000, maxPos[i].y + dir.y * 1000));
         //displayLines.push_back(line);
+        // Get all intersections
         vector<intersectionIndexPair> intersections;
         for (int j = 0; j < lms.lines.size(); j++) {
             optional<Vec2f> p = Line::intersectionSegment(line, lms.lines[j]);
@@ -171,6 +175,7 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
                 intersections.push_back(intersectionIndexPair(j, p.value()));
             }
         }
+
         if (!intersections.empty()) {
             float lowestDistance = (intersections[0].point - line.start).lengthSquared();
             intersectionIndexPair closestIntersection = intersections[0];
@@ -188,20 +193,45 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
         }
         else {
             correspondingIndex[i] = -1;
-            isPointUseable = false; // If a line has no intersection this point is not useable
+            return false; // If a line has no intersection this point is not useable
             //cout << "No intersection found" << endl;
         }
     }
     for (int i = 1; i < size; i++) {
         if (correspondingIndex[i-1] != correspondingIndex[i]) {
-            isPointUseable = false;
+            return false;
             //printf("Inconsistent corresponding landmark indices: %d and %d on index %d\n", correspondingIndex[i-1], correspondingIndex[i], i);
         }
     }
-    if (isPointUseable) lp.lmIndex = correspondingIndex[0]; 
-    
+    lp.lmIndex = correspondingIndex[0]; 
     //printf("Index: %d\n", lp.lmIndex);
-    return isPointUseable;
+
+    // Check if the point is at a reasonable distance from the expected position of the landmark
+    Line line(estimatedPosition, Vec2f(estimatedPosition.x + dir.x * 1000, estimatedPosition.y + dir.y * 1000));
+    vector<intersectionIndexPair> intersections;
+    for (int j = 0; j < lms.lines.size(); j++) {
+        optional<Vec2f> p = Line::intersectionSegment(line, lms.lines[j]);
+        if (p) {
+            intersections.push_back(intersectionIndexPair(j, p.value()));
+        }
+    }
+
+    if (!intersections.empty()) {
+        float lowestDistance = (intersections[0].point - line.start).lengthSquared();
+        intersectionIndexPair closestIntersection = intersections[0];
+        for (int i = 1; i < intersections.size(); i++) {
+            float distance = (intersections[i].point - line.start).lengthSquared();
+            if (distance < lowestDistance) {
+                lowestDistance = distance;
+            }
+        }
+    
+        lowestDistance = sqrtf(lowestDistance);
+        if(lowestDistance > lp.distance + MAX_DISTANCE_DEVIATION || lowestDistance < lp.distance - MAX_DISTANCE_DEVIATION) return false;
+    }
+    else return false;
+
+    return true;
 }
 
 int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Landmarks& landmarks, LidarScan& useableScan) {
