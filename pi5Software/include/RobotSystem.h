@@ -15,6 +15,7 @@
 #include "EncoderController.h"
 #include "Landmarks.h"
 #include "Gyro.h"
+#include "ObstacleDetection.h"
 
 class RobotSystem{
 	public:
@@ -28,6 +29,7 @@ class RobotSystem{
 	Landmarks landmarks;
 	GuidanceData guidanceData;
 	bool startActivated;
+	ObstacleDetection obstacleDetection;
 
 	// Pose
 	float heading;
@@ -42,18 +44,19 @@ class RobotSystem{
 	Gyro gyro;
 
 	RobotSystem() :
-		  gpioController(),
-		  encoderController(gpioController),
-		  gyro(),
-		  gp(1000,1000, BLACK),
-		  displayUI(visibility),
-		  lidarDriver(nullptr),
-		  landmarks(),
-		  guidanceThread(guidanceMain, ref(guidanceData)),
-		  startActivated(false),
-		  initTime(std::chrono::high_resolution_clock::now()),
-		  startTime(std::chrono::high_resolution_clock::now()),
-		  heading(0.0f),
-		  position(0.0f, 0.0f)
+		gpioController(),
+		encoderController(gpioController),
+		gyro(),
+		gp(1000,1000, BLACK),
+		displayUI(visibility),
+		lidarDriver(nullptr),
+		landmarks(),
+		guidanceThread(guidanceMain, ref(guidanceData)),
+		startActivated(false),
+		initTime(std::chrono::high_resolution_clock::now()),
+		startTime(std::chrono::high_resolution_clock::now()),
+		heading(0.0f),
+		position(0.0f, 0.0f),
+		obstacleDetection()
 	{}
 };

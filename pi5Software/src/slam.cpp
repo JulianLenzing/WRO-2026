@@ -135,9 +135,15 @@ void generateTestPoints(
     }
 }
 
-bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Landmarks lms) {
+bool isPointDistanceUseable(const LidarPoint& lp, const float& minDistance, const float& maxDistance){
     // Minimum and maximum distance check
     if(lp.distance <= minDistance || lp.distance >= maxDistance) return false;
+    return true;
+}
+    
+
+bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Landmarks lms) {
+    if(!isPointDistanceUseable(lp, minDistance, maxDistance)) return false;
     
     // Direction check
     Vec2f dir = lp.getDirection();
@@ -237,15 +243,26 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
 }
 
 int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Landmarks& landmarks, LidarScan& useableScan) {
-    int usablePointCount = 0;
+    int useablePointCount = 0;
     for (LidarPoint& lp : scan.scan) {
         if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, landmarks)) {
             useableScan.scan.push_back(lp);
             //printf("Usable Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
-            usablePointCount++;
+            useablePointCount++;
         }
     }
-    return usablePointCount;
+    return useablePointCount;
+}
+
+int getDistanceUseablePoints(const LidarScan& scan, LidarScan& useableScan) {
+    int useablePointCount = 0;
+    for (const LidarPoint& lp : scan.scan) {
+        if(isPointDistanceUseable(lp, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE)) {
+            useableScan.scan.push_back(lp);
+            useablePointCount++;
+        }
+    }
+    return useablePointCount;
 }
 
 Line linearRegression(const vector<Vec2f>& points) {

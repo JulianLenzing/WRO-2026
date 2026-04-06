@@ -5,6 +5,7 @@
 #include "State.h"
 #include "RobotSystem.h"
 #include "slam.h"
+#include "../RobotSystem.h"
 
 //#define USE_ENCODER_FOR_HEADING
 
@@ -138,7 +139,7 @@ class RunCourseState : public State{
             dpd.appendPoint(robot.position, RED, ESTIMATED_POSITION_POINT);
             float length = 0.15f;
             dpd.appendLine(Line(robot.position, Vec2f(robot.position.x + cos(robot.heading) * length, robot.position.y + sin(robot.heading) * length)), RED);
-            dpd.appendLines(robot.landmarks.lines, WHITE, LANDMARK_LINE);         
+            dpd.appendLines(robot.landmarks.lines, WHITE, LANDMARK_LINE);
 
             LidarScan lidarScan;
             getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
@@ -196,6 +197,20 @@ class RunCourseState : public State{
                 robot.displayUI.lidarPositionStatus = false;
             }
 
+            /*---------Detect-obstacles----------*/
+            useableScan.scan.clear();
+            getDistanceUseablePoints(lidarScan, useableScan);
+            robot.obstacleDetection.feedScan(useableScan, robot.position);
+            for(const Obstacle& o : robot.obstacleDetection.possibleObstacles) {
+                dpd.appendPoint(o.position, GRAY);
+            }
+            std::vector<Obstacle> obstacles;
+            robot.obstacleDetection.getObstacles(obstacles);
+            for(const Obstacle& o : obstacles) {
+                dpd.appendPoint(o.position, YELLOW);
+            }
+            
+            /*--------Update-graphics-----------*/
             robot.visibility.setLineVisibility(SLAM_DEBUG_LINE, false);
             dpd.updateVisibility(robot.visibility);	
             dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA, STANDARD_POINT);
