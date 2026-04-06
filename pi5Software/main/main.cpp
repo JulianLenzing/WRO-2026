@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iomanip>
 
-
 #include "RobotSystem.h"
 #include "StateMachine.h"
 #include "State.h"
@@ -63,9 +62,13 @@ int main(){
 
 	sm.setState(&initState, robot);
 	sm.setState(&startState, robot);
-	while(!robot.startActivated)
+	while(!robot.displayUI.start && !robot.startActivated)
 	{
 		sm.update(robot);
+		if(robot.displayUI.exit) {
+			sm.setState(&stopState, robot);
+			return 0;
+		}
 	}
 	
 	sm.setState(&runCourseState, robot);

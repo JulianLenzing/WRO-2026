@@ -1,12 +1,5 @@
 #pragma once
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/i2c-dev.h>
-extern "C" {
-#include <i2c/smbus.h>
-}
 #include <chrono>
 #include <cmath>
 #include <cstdio>

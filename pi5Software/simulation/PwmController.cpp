@@ -27,12 +27,15 @@ MotorController::~MotorController(){
     setThrottle(0.0f);
 }
     
-void MotorController::unlockControl() { setMs(1.5); }
+void MotorController::unlockControl() { return; }
 
 void MotorController::setThrottle(float pThrottle) {
     pThrottle = std::clamp(pThrottle, -1.0f, 1.0f);
     currentThrottle = pThrottle;
     
+    /*--------------------------------------------------------------------------------------------------------------*/
+    /* Here Simulation code */
+    // Throttle goes from -1 to 1
 } 
 
 float MotorController::getThrottle() const { return currentThrottle; }
@@ -66,6 +69,10 @@ void ServoController::setAngle(float angle) {
     else if(angle > M_PI && angle < minAngle) {
         angle = minAngle;
     }
+
+    /*--------------------------------------------------------------------------------------------------------------*/
+    /* Here Simulation code */
+    //current angle format [0, 2PI] winding counterclockwise
 }    
 
 float ServoController::getAngle() const { return currentAngle; }

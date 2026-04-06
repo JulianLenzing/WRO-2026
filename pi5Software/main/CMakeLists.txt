@@ -8,9 +8,15 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
+if(NOT SIMULATION)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
 find_package(PiPCA9685 REQUIRED)
+endif()
+
+if(SIMULATION)
+find_package(glfw3 REQUIRED)
+endif()
 
 set(IMGUI_SRC
     ../lib/imgui/imgui.cpp
@@ -41,7 +47,6 @@ target_include_directories( main PUBLIC
 )
 
 target_link_libraries(main PRIVATE 
-	${CMAKE_SOURCE_DIR}/../lib/glfw/libglfw3.a
 	OpenGL::GL
 )
 
@@ -63,6 +68,7 @@ if(NOT SIMULATION)
 	)
 
 	target_link_libraries(main PRIVATE
+		${CMAKE_SOURCE_DIR}/../lib/glfw/libglfw3.a
 		${CMAKE_SOURCE_DIR}/../lib/rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a
 		${LIBGPIOD_LIBRARIES}
 		PiPCA9685::PiPCA9685
@@ -73,12 +79,17 @@ if(NOT SIMULATION)
 endif()
 
 if(SIMULATION)
-	target_compile_definitions(main PRIVATE NO_PCA9685)
+	target_compile_definitions(main PRIVATE SIMULATION)
 
 	target_sources(main PRIVATE 
 		../simulation/lidar.cpp
 		../simulation/EncoderController.cpp
 		../simulation/PwmController.cpp
 		../simulation/GpioController.cpp
+		../simulation/Gyro.cpp
+	)
+
+	target_link_libraries(main PRIVATE 
+		glfw
 	)
 endif()

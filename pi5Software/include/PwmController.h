@@ -3,8 +3,11 @@
 #include <unistd.h>
 #include <cmath>
 #include <algorithm>
-#include <PiPCA9685/PCA9685.h>
 #include <iostream>
+
+#ifndef SIMULATION 
+#include <PiPCA9685/PCA9685.h> 
+#endif
 
 class PwmController {
 public:
@@ -16,7 +19,7 @@ protected:
 
     int line;
     float dutyCycleRange;
-    #ifndef NO_PCA9685 
+    #ifndef SIMULATION 
     PiPCA9685::PCA9685 pca; 
     #endif
 };

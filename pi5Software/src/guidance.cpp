@@ -4,7 +4,6 @@
 #include <optional>
 
 /* user includes */
-#include <lgpio.h>
 #include "GuidanceData.h"
 #include "PwmController.h"
 
@@ -13,7 +12,7 @@
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
 #define MAX_THROTTLE 1.0f
-#define MIN_THROTTLE 0.2f
+#define MIN_THROTTLE 0.25f
 #define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
 
 /* Guidance parameters */
