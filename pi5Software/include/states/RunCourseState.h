@@ -8,8 +8,8 @@
 
 //#define USE_ENCODER_FOR_HEADING
 
-#define LIDAR_POSITION_TAU 0.4f
-#define LIDAR_HEADING_TAU 0.1f
+#define LIDAR_POSITION_TAU 0.001f
+#define LIDAR_HEADING_TAU 0.001f
 
 // Update times in ms
 #define ENCODER_UPDATE_TIME 10
@@ -44,20 +44,20 @@ class RunCourseState : public State{
         lastGuidanceUpdateTime = std::chrono::high_resolution_clock::now();
         lastUIUpdateTime = std::chrono::high_resolution_clock::now();   
 
-        robot.position = Vec2f(1.0f, 0.25f);
+        robot.position = Vec2f(1.5f, 0.5f);
         robot.heading = 0.0f;
 
         for(int i = 0; i < 3; i++) {
-            /*
             robot.guidanceData.appendWaypoint(Vec2f(2.0f, 0.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(2.5f, 1.0f));
-            robot.guidanceData.appendWaypoint(Vec2f(2.5f, 2.0f));
-            robot.guidanceData.appendWaypoint(Vec2f(2.0f, 2.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(1.0f, 2.5f));
+            robot.guidanceData.appendWaypoint(Vec2f(2.15f, 1.0f));
+            robot.guidanceData.appendWaypoint(Vec2f(2.15f, 2.0f));
+            robot.guidanceData.appendWaypoint(Vec2f(2.0f, 2.15f));
+            robot.guidanceData.appendWaypoint(Vec2f(1.0f, 2.15f));
             robot.guidanceData.appendWaypoint(Vec2f(0.5f, 2.0f));
             robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.0f));
             robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.5f));
-            */
+
+            /*
             robot.guidanceData.appendWaypoint(Vec2f(1.5f, 0.25f));
             robot.guidanceData.appendWaypoint(Vec2f(1.75f, 0.5f));
             robot.guidanceData.appendWaypoint(Vec2f(1.75f, 1.5f));
@@ -66,9 +66,9 @@ class RunCourseState : public State{
             robot.guidanceData.appendWaypoint(Vec2f(0.25f, 1.5f));
             robot.guidanceData.appendWaypoint(Vec2f(0.25f, 0.5f));
             robot.guidanceData.appendWaypoint(Vec2f(0.5f, 0.25f));
-            
+            */
         }
-        robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.25f));
+        robot.guidanceData.appendWaypoint(Vec2f(1.5f, 0.5f));
     }
 
     void update(RobotSystem& robot) override
@@ -84,6 +84,7 @@ class RunCourseState : public State{
 
             printf("-----------Gyro---------------\n");
             printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), gyroDt.count());
+
             float deltaHeading = 0.0f;
             if(robot.gyro.getDeltaHeading(deltaHeading)) {
                 robot.heading += deltaHeading;
@@ -132,11 +133,13 @@ class RunCourseState : public State{
 
             printf("-----------Lidar---------------\n");
             printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), lidarDt.count());
-
+        
             dpd.clear();
             dpd.appendPoint(robot.position, RED, ESTIMATED_POSITION_POINT);
-            dpd.appendLines(robot.landmarks.lines, WHITE, LANDMARK_LINE);
-            
+            float length = 0.15f;
+            dpd.appendLine(Line(robot.position, Vec2f(robot.position.x + cos(robot.heading) * length, robot.position.y + sin(robot.heading) * length)), RED);
+            dpd.appendLines(robot.landmarks.lines, WHITE, LANDMARK_LINE);         
+
             LidarScan lidarScan;
             getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
             lidarScan.rotate(robot.heading); // Rotate scan to align with robot's heading
@@ -144,16 +147,26 @@ class RunCourseState : public State{
 
             LidarScan useableScan;
             getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);
-
+            
+            std::optional<float> lidarHeading;
+            lidarHeading.reset();
             std::optional<float> maybeNewEstimatedHeading = lidarEstimateHeading(useableScan, robot.landmarks, robot.position);            
              if(maybeNewEstimatedHeading.has_value()) {
                 float error = maybeNewEstimatedHeading.value();
+                lidarHeading = robot.heading + error;
                 float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_HEADING_TAU);
                 robot.heading += error * (1.0f - alpha);
                 robot.heading = EncoderController::normaliseAngle(robot.heading);
+
+                // The scan is corrected using the angle error from the lidar
+                // The useable points are reassigned to ensure greater accuracy             
+                lidarScan.rotate(error);
+                useableScan.scan.clear();
+                getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);    
+
                 printf("Error: %.2f Alpha: %.2f Added Heading: %.2f\n", error, alpha, error * (1.0f-alpha));
-                useableScan.rotate(robot.heading-beginningHeading);
                 cout << "Lidar heading: " << maybeNewEstimatedHeading.value() / M_PI * 180 << " degrees" << endl;
+                
                 robot.displayUI.lidarHeadingStatus = true;
             }
             else {
@@ -163,16 +176,17 @@ class RunCourseState : public State{
             for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
             for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + robot.position, BLUE, USEABLE_LIDAR_POINT_POINT);}
 
-
             auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.landmarks, robot.position);
 
             if(maybeNewEstimatedPosition.has_value()) {
                 Vec2f error = maybeNewEstimatedPosition.value() - robot.position;
-                dpd.appendPoint(maybeNewEstimatedPosition.value(), YELLOW, NEW_ESTIMATED_POSITION_POINT);
-
                 float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_POSITION_TAU);
                 robot.position += error * (1.0f - alpha);
                 robot.position = boundPosition(robot.position, robot.landmarks);
+
+                Vec2f tmp = maybeNewEstimatedPosition.value();
+                dpd.appendPoint(tmp, YELLOW, NEW_ESTIMATED_POSITION_POINT);
+                if(lidarHeading.has_value()) dpd.appendLine(Line(tmp, Vec2f(tmp.x + cos(lidarHeading.value()) * length, tmp.y + sin(lidarHeading.value()) * length)), YELLOW);
 
                 cout << "Lidar position: " << maybeNewEstimatedPosition.value().x << ", " << maybeNewEstimatedPosition.value().y << " m" << endl;
                 robot.displayUI.lidarPositionStatus = true;
@@ -182,6 +196,7 @@ class RunCourseState : public State{
                 robot.displayUI.lidarPositionStatus = false;
             }
 
+            robot.visibility.setLineVisibility(SLAM_DEBUG_LINE, false);
             dpd.updateVisibility(robot.visibility);	
             dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA, STANDARD_POINT);
             robot.gp.update(dpd);
