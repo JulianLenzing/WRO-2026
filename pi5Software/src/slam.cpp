@@ -150,6 +150,7 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
     maxPos[2] = Vec2f(xRange.y,yRange.y);
     maxPos[3] = Vec2f(xRange.y,yRange.x);
 
+    // Process positions
     for(auto& p : maxPos) {
         // Clamp to within landmark boundaries to avoid out of bounds errors in intersection calculation
         p.x = clamp(p.x, lms.outerBottomLeft.x + 0.001f, lms.outerTopRight.x - 0.001f);
@@ -162,7 +163,7 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
         //dpd.appendPoint(p, GREEN, SLAM_DEBUG_POINT);
     }
 
-    // Check if the same landmark is hit at all possible position (approximated as 4)
+    // Check if the same landmark is hit at all possible position (approximated as 4), this is done to prevent points at edges being assigned to the wrong landmark
     int correspondingIndex[size];
     for (int i = 0; i < sizeof(maxPos) / sizeof(Vec2f); i++) {
         Line line(maxPos[i], Vec2f(maxPos[i].x + dir.x * 1000, maxPos[i].y + dir.y * 1000));
@@ -205,8 +206,8 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
     }
     lp.lmIndex = correspondingIndex[0]; 
     //printf("Index: %d\n", lp.lmIndex);
-
-    // Check if the point is at a reasonable distance from the expected position of the landmark
+    
+    // Check if the point is at a reasonable distance from the expected position of the landmark if it is closer it may be an obstacle
     Line line(estimatedPosition, Vec2f(estimatedPosition.x + dir.x * 1000, estimatedPosition.y + dir.y * 1000));
     vector<intersectionIndexPair> intersections;
     for (int j = 0; j < lms.lines.size(); j++) {
@@ -227,7 +228,8 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
         }
     
         lowestDistance = sqrtf(lowestDistance);
-        if(lowestDistance > lp.distance + MAX_DISTANCE_DEVIATION || lowestDistance < lp.distance - MAX_DISTANCE_DEVIATION) return false;
+        if(lowestDistance + MAX_DISTANCE_DEVIATION < lp.distance) return false;
+        if(lowestDistance - MAX_DISTANCE_DEVIATION > lp.distance) return false;
     }
     else return false;
 
