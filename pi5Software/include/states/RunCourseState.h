@@ -43,33 +43,7 @@ class RunCourseState : public State{
         lastEncoderUpdateTime = std::chrono::high_resolution_clock::now();
         lastLidarUpdateTime = std::chrono::high_resolution_clock::now();   
         lastGuidanceUpdateTime = std::chrono::high_resolution_clock::now();
-        lastUIUpdateTime = std::chrono::high_resolution_clock::now();   
-
-        robot.position = Vec2f(1.5f, 0.5f);
-        robot.heading = 0.0f;
-
-        for(int i = 0; i < 3; i++) {
-            robot.guidanceData.appendWaypoint(Vec2f(2.0f, 0.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(2.15f, 1.0f));
-            robot.guidanceData.appendWaypoint(Vec2f(2.15f, 2.0f));
-            robot.guidanceData.appendWaypoint(Vec2f(2.0f, 2.15f));
-            robot.guidanceData.appendWaypoint(Vec2f(1.0f, 2.15f));
-            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 2.0f));
-            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.0f));
-            robot.guidanceData.appendWaypoint(Vec2f(1.0f, 0.5f));
-
-            /*
-            robot.guidanceData.appendWaypoint(Vec2f(1.5f, 0.25f));
-            robot.guidanceData.appendWaypoint(Vec2f(1.75f, 0.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(1.75f, 1.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(1.5f, 1.75f));
-            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 1.75f));
-            robot.guidanceData.appendWaypoint(Vec2f(0.25f, 1.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(0.25f, 0.5f));
-            robot.guidanceData.appendWaypoint(Vec2f(0.5f, 0.25f));
-            */
-        }
-        robot.guidanceData.appendWaypoint(Vec2f(1.5f, 0.5f));
+        lastUIUpdateTime = std::chrono::high_resolution_clock::now();
     }
 
     void update(RobotSystem& robot) override
@@ -83,8 +57,8 @@ class RunCourseState : public State{
         if (gyroDt >= std::chrono::milliseconds(GYRO_UPDATE_TIME)) {
             lastGyroUpdateTime = now;
 
-            printf("-----------Gyro---------------\n");
-            printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), gyroDt.count());
+            //printf("-----------Gyro---------------\n");
+            //printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), gyroDt.count());
 
             float deltaHeading = 0.0f;
             if(robot.gyro.getDeltaHeading(deltaHeading)) {
@@ -93,7 +67,7 @@ class RunCourseState : public State{
             }
             else robot.displayUI.gyroStatus = false;
             robot.heading = Gyro::normaliseAngle(robot.heading);
-            printf("Delta Yaw: %.2f Absolute Yaw: %.2f\n", deltaHeading, robot.heading);
+            //printf("Delta Yaw: %.2f Absolute Yaw: %.2f\n", deltaHeading, robot.heading);
         }
         #endif
 
@@ -102,8 +76,8 @@ class RunCourseState : public State{
         if (EncoderDt >= std::chrono::milliseconds(ENCODER_UPDATE_TIME)) {
             lastEncoderUpdateTime = now;
             
-            printf("---------Encoder--------------\n");
-            printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), EncoderDt.count());
+            //printf("---------Encoder--------------\n");
+            //printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), EncoderDt.count());
 
             // Update position and heading based on encoder data
             float deltaDistance = 0;
@@ -124,7 +98,7 @@ class RunCourseState : public State{
                 robot.heading += deltaHeading;
                 robot.heading =  EncoderController::normaliseAngle(robot.heading);
             #endif
-            cout << "Delta distance: " << deltaDistance << ", Position: " << robot.position.x << ", " << robot.position.y << " m, Heading: " << robot.heading / M_PI * 180 << " degrees" << endl;
+            //cout << "Delta distance: " << deltaDistance << ", Position: " << robot.position.x << ", " << robot.position.y << " m, Heading: " << robot.heading / M_PI * 180 << " degrees" << endl;
         }
 
         /*----------Lidar-loop---------*/
@@ -132,8 +106,8 @@ class RunCourseState : public State{
         if (lidarDt >= std::chrono::milliseconds(LIDAR_UPDATE_TIME)) {
             lastLidarUpdateTime = now;
 
-            printf("-----------Lidar---------------\n");
-            printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), lidarDt.count());
+            //printf("-----------Lidar---------------\n");
+            //printf("T1: %d ms T2: %d ms DT: %d ms\n", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.initTime).count(), std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - robot.startTime).count(), lidarDt.count());
         
             dpd.clear();
             dpd.appendPoint(robot.position, RED, ESTIMATED_POSITION_POINT);
@@ -165,13 +139,13 @@ class RunCourseState : public State{
                 useableScan.scan.clear();
                 getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);    
 
-                printf("Error: %.2f Alpha: %.2f Added Heading: %.2f\n", error, alpha, error * (1.0f-alpha));
-                cout << "Lidar heading: " << maybeNewEstimatedHeading.value() / M_PI * 180 << " degrees" << endl;
+                //printf("Error: %.2f Alpha: %.2f Added Heading: %.2f\n", error, alpha, error * (1.0f-alpha));
+                //cout << "Lidar heading: " << maybeNewEstimatedHeading.value() / M_PI * 180 << " degrees" << endl;
                 
                 robot.displayUI.lidarHeadingStatus = true;
             }
             else {
-                cout << "Heading estimation failed, keeping previous estimate." << endl;
+                //cout << "Heading estimation failed, keeping previous estimate." << endl;
                 robot.displayUI.lidarHeadingStatus = false;
             }
             for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
@@ -189,11 +163,11 @@ class RunCourseState : public State{
                 dpd.appendPoint(tmp, YELLOW, NEW_ESTIMATED_POSITION_POINT);
                 if(lidarHeading.has_value()) dpd.appendLine(Line(tmp, Vec2f(tmp.x + cos(lidarHeading.value()) * length, tmp.y + sin(lidarHeading.value()) * length)), YELLOW);
 
-                cout << "Lidar position: " << maybeNewEstimatedPosition.value().x << ", " << maybeNewEstimatedPosition.value().y << " m" << endl;
+                //cout << "Lidar position: " << maybeNewEstimatedPosition.value().x << ", " << maybeNewEstimatedPosition.value().y << " m" << endl;
                 robot.displayUI.lidarPositionStatus = true;
             }
             else {
-                cout << "Position estimation failed, keeping previous estimate." << endl;
+                //cout << "Position estimation failed, keeping previous estimate." << endl;
                 robot.displayUI.lidarPositionStatus = false;
             }
 
@@ -213,7 +187,7 @@ class RunCourseState : public State{
             /*--------Update-graphics-----------*/
             robot.visibility.setLineVisibility(SLAM_DEBUG_LINE, false);
             dpd.updateVisibility(robot.visibility);	
-            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA, STANDARD_POINT);
+            dpd.appendPoint(robot.guidanceData.lookAtCurrentWaypoint().point, MAGENTA);
             robot.gp.update(dpd);
         }
 
@@ -224,7 +198,12 @@ class RunCourseState : public State{
 
             // Update guidance data with the new position and heading            
             robot.guidanceData.setRobotData(robot.position, robot.heading);
-            if(0) robot.guidanceData.appendWaypoint(Vec2f(2.5, 0.5)); // Placeholder for when we have a way to determine new waypoints
+
+            // Update waypoints using obstacles
+            std::vector<Obstacle> obstacles;
+            robot.obstacleDetection.getObstacles(obstacles);
+            if (robot.guidanceData.getReachedLastWaypoint()) robot.pathfinder.update(robot.position, robot.heading, obstacles, robot.guidanceData);
+            if (robot.pathfinder.shouldStop()) robot.stopRequested = true;
         }
 
         /*----------UI-loop---------*/
@@ -239,7 +218,8 @@ class RunCourseState : public State{
             robot.displayUI.heading = robot.heading;
             robot.displayUI.steeringAngle = steeringAngle;
             robot.displayUI.throttle = throttle;
-            robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint().point;            
+            robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint().point;
+            robot.displayUI.round = robot.pathfinder.getRound();
 
             robot.displayUI.update();
         }

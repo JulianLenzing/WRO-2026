@@ -22,10 +22,11 @@ class GuidanceData
 
     float steeringAngle;
     float throttle;
+    bool reachedLastWaypoint;
     Waypoint currentWaypoint;
 
     public:
-    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f), currentWaypoint(Vec2f(-1, -1)) {}
+    GuidanceData() : position(0.0f, 0.0f), heading(0.0f), steeringAngle(0.0f), throttle(0.0f), reachedLastWaypoint(false), currentWaypoint(Waypoint(Vec2f(-1, -1),0.0f)) {}
 
     void start() {
         std::lock_guard<std::mutex> lock(mtx);
@@ -96,6 +97,7 @@ class GuidanceData
     }
 
     Waypoint lookAtCurrentWaypoint() {
+        std::lock_guard<std::mutex> lock(mtx);
         return currentWaypoint;
     }
 
@@ -103,5 +105,17 @@ class GuidanceData
     {
         std::lock_guard<std::mutex> lock(mtx);
         return waypoints.size();
+    }
+
+    void setReachedLastWaypoint(bool b)
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        reachedLastWaypoint = b;
+    }
+
+    bool getReachedLastWaypoint()
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        return reachedLastWaypoint;
     }
 };

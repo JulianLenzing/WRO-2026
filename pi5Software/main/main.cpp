@@ -72,9 +72,9 @@ int main(){
 	}
 	
 	sm.setState(&runCourseState, robot);
-	while(true){
+	while(!robot.stopRequested){
 		sm.update(robot);
-		if(robot.displayUI.exit) break;
+		if( robot.displayUI.exit) break;
 	}
 
 	sm.setState(&stopState, robot);

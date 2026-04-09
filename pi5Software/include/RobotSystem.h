@@ -16,6 +16,7 @@
 #include "Landmarks.h"
 #include "Gyro.h"
 #include "ObstacleDetection.h"
+#include "Pathfinder.h"
 
 class RobotSystem{
 	public:
@@ -29,7 +30,9 @@ class RobotSystem{
 	Landmarks landmarks;
 	GuidanceData guidanceData;
 	bool startActivated;
+	bool stopRequested;
 	ObstacleDetection obstacleDetection;
+	Pathfinder pathfinder;
 
 	// Pose
 	float heading;
@@ -53,10 +56,12 @@ class RobotSystem{
 		landmarks(),
 		guidanceThread(guidanceMain, ref(guidanceData)),
 		startActivated(false),
+		stopRequested(false),
 		initTime(std::chrono::high_resolution_clock::now()),
 		startTime(std::chrono::high_resolution_clock::now()),
 		heading(0.0f),
 		position(0.0f, 0.0f),
-		obstacleDetection()
+		obstacleDetection(),
+		pathfinder()
 	{}
 };

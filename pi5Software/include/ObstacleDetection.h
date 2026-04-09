@@ -18,12 +18,12 @@ public:
     ObstacleDetection()
     {
         std::vector<Obstacle> basePoints = {
-            {Obstacle(Vec2f(1.0f, 0.4f))},
-            {Obstacle(Vec2f(1.0f, 0.6f))},
-            {Obstacle(Vec2f(1.5f, 0.4f))},
-            {Obstacle(Vec2f(1.5f, 0.6f))},
-            {Obstacle(Vec2f(2.0f, 0.4f))},
-            {Obstacle(Vec2f(2.0f, 0.6f))}
+            {Obstacle(Vec2f(1.0f, 0.4f), 4)},
+            {Obstacle(Vec2f(1.0f, 0.6f), 1)},
+            {Obstacle(Vec2f(1.5f, 0.4f), 5)},
+            {Obstacle(Vec2f(1.5f, 0.6f), 2)},
+            {Obstacle(Vec2f(2.0f, 0.4f), 6)},
+            {Obstacle(Vec2f(2.0f, 0.6f), 3)}
         };
 
         Vec2f pivot(1.5f, 1.5f);

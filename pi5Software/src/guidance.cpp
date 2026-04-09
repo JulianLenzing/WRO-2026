@@ -2,10 +2,15 @@
 #include <cmath>
 #include <iostream>
 #include <optional>
+#include <queue>
 
 /* user includes */
 #include "GuidanceData.h"
 #include "PwmController.h"
+#include "../include/Waypoint.h"
+
+#include "Graphics.h"
+#include "DisplayData.h"
 
 /* Steering servo and motor parameters */
 #define MAX_STEERING_ANGLE (M_PI/2.0f) 
@@ -29,7 +34,7 @@ void guidanceMain(GuidanceData& guidanceData)
     motor.unlockControl();
 
     optional<Waypoint> currentWaypoint;
-    currentWaypoint.reset();
+    queue<Vec2f> steeringPointBuffer;
     bool atWaypoint = false;
     float heading = 0;
     Vec2f position(0, 0);
@@ -41,13 +46,14 @@ void guidanceMain(GuidanceData& guidanceData)
             guidanceData.getRobotData(position, heading);
 
             // Check if we dont have a current waypoint and if a new one is available and try to get one from the queue
-            if (guidanceData.getWaypointCount() > 0 && !currentWaypoint.has_value())
+            if (!currentWaypoint.has_value())
             {
-                currentWaypoint = guidanceData.getWaypoint();
-                if (currentWaypoint.has_value())
+                if (guidanceData.getWaypointCount() > 0)
                 {
-                    cout << "Steering to new Waypoint: (" << currentWaypoint->point.x << ", " << currentWaypoint->point.y << ")" << endl;
+                    currentWaypoint = guidanceData.getWaypoint();
+                    guidanceData.setReachedLastWaypoint(false);
                 }
+                else guidanceData.setReachedLastWaypoint(true);
             }
 
             // If we have a waypoint, calculate the steering angle and set the servo and motor accordingly
@@ -60,7 +66,8 @@ void guidanceMain(GuidanceData& guidanceData)
                 steering.setAngle(direction-heading);
 
                 // Throttle is proportional to distance but capped at MAX_THROTTLE and at minimum MIN_THROTTLE to ensure the robot keeps moving
-                float throttle = clamp(distance / ACCELERATION_CONSTANT * (MAX_THROTTLE - MIN_THROTTLE), MIN_THROTTLE, MAX_THROTTLE);
+                float throttle = MAX_THROTTLE;
+                if (currentWaypoint.value().slow) throttle = clamp(distance / ACCELERATION_CONSTANT * (MAX_THROTTLE - MIN_THROTTLE), MIN_THROTTLE, MAX_THROTTLE);
 
                 // Throttle is capped at MAX_THROTTLE and MIN_THROTTLE and is reduced at large steering angles
                 float currentAbsoluteSteeringAngle = steering.getAngle();
@@ -74,7 +81,7 @@ void guidanceMain(GuidanceData& guidanceData)
                 guidanceData.setUiData(steering.getAngle(), motor.getThrottle());
 
                 // Check if we are at the waypoint and if so reset the current waypoint to get the next one from the queue
-                if(distance < WAYPOINT_THRESHOLD) currentWaypoint.reset(); 
+                if(distance < WAYPOINT_THRESHOLD) currentWaypoint.reset();
             }
             else {
                 /* Lock steering and stop motor if no current waypoint is set*/
@@ -87,4 +94,5 @@ void guidanceMain(GuidanceData& guidanceData)
     steering.setMiddle();
     motor.setThrottle(0.0f);
 }
+
 

@@ -4,6 +4,7 @@
 
 #include "State.h"
 #include "RobotSystem.h"
+#include "../RobotSystem.h"
 
 class StartState : public State{
 	void enter(RobotSystem& robot) override 
@@ -23,6 +24,10 @@ class StartState : public State{
 		robot.gpioController.setLed2High();
 		robot.startTime = std::chrono::high_resolution_clock::now();
 
+		robot.position = Vec2f(1.5f, 0.5f);
+		robot.heading = 0.0f;
+		robot.pathfinder.setRunDirection(RUN_DIRECTION_CCW); // Placeholder until run direction is automatically determined
+
 		// Start Lidar
 		startLidar(robot.lidarDriver);
 
@@ -31,6 +36,7 @@ class StartState : public State{
 		robot.gyro.reset();
 		
 		// Start guidance
+		robot.guidanceData.setRobotData(robot.position, robot.heading);
 		robot.guidanceData.start();
 	}
 	

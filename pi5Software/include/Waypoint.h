@@ -4,9 +4,11 @@
 
 class Waypoint {
 public:
-    Waypoint() : point(0.0f, 0.0f), reverse(false) {}
-    Waypoint(Vec2f pPoint, bool pReverse = false) : point(pPoint), reverse(pReverse) {}
+    Waypoint() : point(0.0f, 0.0f), heading(0.0f), reverse(false), slow(true) {}
+    Waypoint(Vec2f pPoint, float pHeading, bool pSlow = true, bool pReverse = false) : point(pPoint), heading(pHeading), slow(pSlow), reverse(pReverse) {}
 
     Vec2f point;
+    float heading;
     bool reverse;
+    bool slow;
 };

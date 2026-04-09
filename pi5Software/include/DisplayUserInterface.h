@@ -36,6 +36,7 @@ class DisplayUserInterface {
     float steeringAngle = 0.0f;
     float throttle = 0.0f;
     Vec2f currentWaypoint = Vec2f(-1, -1);
+    size_t round = 0;
     // Status of the sensors
     bool encoderStatus = false;
     bool gyroStatus = false;
@@ -52,7 +53,7 @@ class DisplayUserInterface {
 
         // Make context current
         glfwMakeContextCurrent(window);
-        glfwSwapInterval(1);
+        glfwSwapInterval(0);
         //glfwSetWindowPos(window, 0, 0); Only on X11
 
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -124,6 +125,7 @@ class DisplayUserInterface {
             ImGui::SeparatorText("Pose");
             ImGui::Text("X: %.3f Y: %.3f m", position.x, position.y);
             ImGui::Text("Heading: %3.2f degrees", heading / M_PI * 180);
+            ImGui::Text("Current round: %d", int(round));
             ImGui::SeparatorText("Guidance");
             ImGui::Text("Current waypoint - X: %.2f Y: %.2f m", currentWaypoint.x, currentWaypoint.y);
             ImGui::Text("Steering angle: %3.2f degrees", steeringAngle / M_PI * 180);
