@@ -81,6 +81,7 @@ class GuidanceData
     {
         std::lock_guard<std::mutex> lock(mtx);
         waypoints.push(waypoint);
+        reachedLastWaypoint = false;
     }
 
     std::optional<Waypoint> getWaypoint()

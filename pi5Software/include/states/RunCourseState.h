@@ -10,7 +10,7 @@
 //#define USE_ENCODER_FOR_HEADING
 
 #define LIDAR_POSITION_TAU 0.001f
-#define LIDAR_HEADING_TAU 0.001f
+#define LIDAR_HEADING_TAU 0.8f
 
 // Update times in ms
 #define ENCODER_UPDATE_TIME 10

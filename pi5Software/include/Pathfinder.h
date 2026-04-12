@@ -11,6 +11,7 @@
 #include "Obstacle.h"
 #include "GuidanceData.h"
 
+#include "Graphics.h"
 #include "DisplayData.h"
 
 #define ROUNDS_TO_DRIVE 3
@@ -119,7 +120,7 @@ public:
 class Pathfinder
 {
 public:
-    Pathfinder() : currentSideIndex(0), runDirection(RUN_DIRECTION_CCW), round(1), pathfinderState(PATHFINDER_STATE_INITIAL), stop(false)
+    Pathfinder() : currentSideIndex(0), runDirection(RUN_DIRECTION_CCW), round(1), pathfinderState(PATHFINDER_STATE_INITIAL), stop(false), gp()
     {
         sides.emplace_back(Vec2f(0.0f, 0.0f), float(0.0f), Vec2f(0.9f, 0.0f), Vec2f(2.1f, 1.0f), Vec2f(1.5f, 0.5f));
         sides.emplace_back(Vec2f(3.0f, 0.0f), float(M_PI/2.0f), Vec2f(2.0f, 0.9f), Vec2f(3.0f, 2.1f), Vec2f(2.5f, 1.5f));
@@ -128,6 +129,13 @@ public:
 
         initialSide = sides[0];
         finalSide = sides[0];
+
+        initPaths();
+
+        Waypoint wp1(Vec2f(1.0f, 0.0f), float(M_PI/2.0f), false);
+        Waypoint wp2(Vec2f(0.0f, 1.0f), float(M_PI), false);
+        std::vector<Waypoint> output;
+        generateCircleSection(wp1, wp2, output);
     }
 
     void setRunDirection(enum RUN_DIRECTION pRunDirection)
@@ -137,6 +145,7 @@ public:
 
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData)
     {
+        printf("Called update!\n");
         switch (pathfinderState)
         {
             case PATHFINDER_STATE_INITIAL:
@@ -154,6 +163,7 @@ public:
                 else currentSideIndex--;
                 currentSideIndex = (currentSideIndex + 4) % 4;
                 pathfinderState = PATHFINDER_STATE_SIDES;
+                printf("Init Round: %d Index: %d\n", round, currentSideIndex);
                 break;
 
             case PATHFINDER_STATE_SIDES:
@@ -194,10 +204,13 @@ public:
                 currentSideIndex = (currentSideIndex + 4) % 4;
                 if (currentSideIndex == 0) round++;
 
+                printf("Round: %d Index: %d\n", round, currentSideIndex);
+
                 if (round == ROUNDS_TO_DRIVE + 1)
                 {
                     pathfinderState = PATHFINDER_STATE_FINAL;
                     round = ROUNDS_TO_DRIVE;
+                    printf("Here!!!!!\n");
                 }
 
                 break;
@@ -212,12 +225,11 @@ public:
                     guidanceData.appendWaypoint(wp);
                 }
 
-
                 pathfinderState = PATHFINDER_STATE_STOP;
                 break;
 
             case PATHFINDER_STATE_STOP:
-                stop = true;
+                if (guidanceData.getReachedLastWaypoint()) stop = true;
                 break;
         }
     }
@@ -236,11 +248,14 @@ private:
     enum RUN_DIRECTION runDirection;
     enum PATHFINDER_STATE pathfinderState;
 
+    Graphics gp;
+    DisplayData dpd1;
+
     Path getPathFromObstacle(const Obstacle& obs)
     {
         // Placeholder until color detection and run direction is added
         if (obs.positionNumber > 3) return fullOuter;
-        return fullInner;
+        return lightInner;
     }
 
     void generateBezierPositions(const Waypoint& A, const Waypoint& B, const size_t& interpolationCount, std::vector<Vec2f>& positions)
@@ -279,6 +294,56 @@ private:
         lerp(dest, abbc,bccd,t);   // point on the bezier-curve (black)
     }
 
+    void generateCircleSection(Waypoint wp1, Waypoint wp2, std::vector<Waypoint>& output)
+    {
+        Line l1(wp1.point, wp1.point + Vec2f(cosf(wp1.heading+M_PI/2.0f), sinf(wp1.heading+M_PI/2.0f)));
+        Line l2(wp2.point, wp2.point + Vec2f(cosf(wp2.heading+M_PI/2.0f), sinf(wp2.heading+M_PI/2.0f)));
+
+        dpd1.appendLine(l1, BLUE);
+        dpd1.appendLine(l2, PINK);
+        dpd1.appendPoint(wp1.point, BLUE);
+        dpd1.appendPoint(wp2.point, PINK);
+
+        optional<Vec2f> middle = Line::intersectionInfinite(l1, l2);
+        if (!middle.has_value()) return;
+
+        dpd1.appendPoint(middle.value(), RED);
+        Vec2f rel1 = wp1.point - middle.value();
+        Vec2f rel2 = wp2.point - middle.value();
+        float radius1 = rel1.length();
+        float radius2 = rel2.length();
+        if (radius2 > radius1 + 0.05 || radius2 < radius1 - 0.05) { printf("Radius missmatch!\n"); return;}
+
+        float a1 = atan2f(rel1.y, rel1.x);
+        printf("A1: %.2f ", a1);
+        float a2 = atan2f(rel2.y, rel2.x);
+        printf("A2: %.2f ", a2);
+
+        int j = 10;
+        float deltaAngle = 0;
+        if (a1 <= M_PI )
+        {
+            if (a2 - a1 <= M_PI) deltaAngle = (a2-a1) / float(j);
+            else deltaAngle = (a2 - 2.0f*M_PI - a1) / float(j);
+        }
+        else if (a1 > M_PI)
+        {
+            if (a2 >= a1) deltaAngle = (a2-a1) / float(j);
+            else if (a2 > a1-M_PI) deltaAngle = (a2 - a1) / float(j);
+            else deltaAngle = (a2 + 2.0f*M_PI - a1) / float(j);
+        }
+
+        for (int i = 0; i < j; i++)
+        {
+            float a = a1 + deltaAngle * i;
+            output.push_back(Waypoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), 0.0f, false));
+            dpd1.appendPoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), RED);
+            printf("A: %.2f\n", a);
+        }
+
+        gp.update(dpd1);
+    }
+
     bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
     {
         if (p.x >= lowerLeft.x && p.x <= upperRight.x)
@@ -288,65 +353,81 @@ private:
         return false;
     }
 
-    // Base Values
-    const float xFirstWaypoint{1.0f};
-    const float xSecondWaypoint{1.5f};
-    const float xThirdWaypoint{2.0f};
+    Path initial;
+    Path final;
+    Path fullInner;
+    Path lightInner;
+    Path lightOuter;
+    Path fullOuter;
 
-    const float yFullInner{0.8f};
-    const float yLightInner{0.7f};
-    const float yLightOuter{0.3f};
-    const float yFullOuter{0.2f};
+    void initPaths()
+    {
+        // Base Values
+        const float xFirstWaypoint{0.9f};
+        const float xSecondWaypoint{1.5f};
+        const float xThirdWaypoint{2.0f};
 
-    const Path initial{
-        "Initial",
-        {
-            Waypoint(Vec2f(2.0f, 0.3f), 0.0f, false),
-            Waypoint(Vec2f(2.5f, 0.5f), 0.0f, true),
-        }
-    };
+        const float yFullInner{0.8f};
+        const float yLightInner{0.7f};
+        const float yLightOuter{0.3f};
+        const float yFullOuter{0.2f};
 
-    const Path final{
-        "Final",
-        {
-            Waypoint(Vec2f(1.0f, 0.5f), 0.0f, false),
-            Waypoint(Vec2f(1.5f, 0.5f), 0.0f, true),
-        }
-    };
+        // Initial
+        initial.name = "Initial";
+        initial.waypoints.clear();
+        initial.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
+        initial.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
+        initial.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.5f), 0.0f, false));
+        initial.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.7f), 0.0f, true));
+        initial.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), 0.0f, true, true));
 
-    const Path fullInner{
-        "Full inner",
-        {
-            Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false),
-            Waypoint(Vec2f(xSecondWaypoint, yFullInner), 0.0f, false),
-            Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true)
-        }
-    };
+        // Final
+        final.name = "Final";
+        final.waypoints.clear();
+        final.waypoints.push_back(Waypoint(Vec2f(1.0f, 0.5f), 0.0f, false));
+        final.waypoints.push_back(Waypoint(Vec2f(1.5f, 0.5f), 0.0f, true));
 
-    const Path lightInner{
-        "Light inner",
-        {
-            Waypoint(Vec2f(xFirstWaypoint, yLightInner), 0.0f, false),
-            Waypoint(Vec2f(xSecondWaypoint, yLightInner), 0.0f, false),
-            Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, true)
-        }
-    };
+        // Full inner
+        fullInner.name = "Full inner";
+        fullInner.waypoints.clear();
+        fullInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), M_PI/2.0f, false));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullInner), 0.0f, false));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.3f), 0.0f, false));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(2.6f, 0.7f), 0.0f, true));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.45f), 0.0f, true, true));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), 0.0f, true, true));
 
-    const Path lightOuter{
-        "Light outer",
-        {
-            Waypoint(Vec2f(xFirstWaypoint, yLightOuter), 0.0f, false),
-            Waypoint(Vec2f(xSecondWaypoint, yLightOuter), 0.0f, false),
-            Waypoint(Vec2f(xThirdWaypoint, yLightOuter), 0.0f, true)
-        }
-    };
+        // Light inner
+        lightInner.name = "Light inner";
+        lightInner.waypoints.clear();
+        lightInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightInner), 0.0f, false));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightInner), 0.0f, false));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, true));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.4f), 0.0f, false));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(2.6f, 0.6f), 0.0f, true));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(2.55f, 0.35f), 0.0f, true, true));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(2.58f, 0.2f), 0.0f, true, true));
 
-    const Path fullOuter{
-        "Full outer",
-        {
-            Waypoint(Vec2f(xFirstWaypoint, yFullOuter), 0.0f, false),
-            Waypoint(Vec2f(xSecondWaypoint, yFullOuter), 0.0f, false),
-            Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, true)
-        }
-    };
+        // Light outer
+        lightOuter.name = "Light outer";
+        lightOuter.waypoints.clear();
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightOuter), 0.0f, false));
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightOuter), 0.0f, false));
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightOuter), 0.0f, true));
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.2f, 0.3f), 0.0f, false));
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), 0.0f, true));
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), 0.0f, true, true));
+
+        // Full outer
+        fullOuter.name = "Full outer";
+        fullOuter.waypoints.clear();
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullOuter), 0.0f, false));
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullOuter), 0.0f, false));
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, true));
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), 0.0f, true));
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), 0.0f, true, true));
+    }
 };
+    
