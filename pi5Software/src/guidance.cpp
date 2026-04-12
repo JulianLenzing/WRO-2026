@@ -63,7 +63,10 @@ void guidanceMain(GuidanceData& guidanceData)
 
                 // Set steering and throttle
                 float direction = atan2f(currentWaypoint.value().point.y - position.y, currentWaypoint.value().point.x - position.x);
-                steering.setAngle(direction-heading);
+                float steeringAngle;
+                if (!currentWaypoint.value().reverse) steeringAngle = direction-heading;
+                else steeringAngle = fmodf(heading+M_PI, 2.0f*M_PI) - direction;
+                steering.setAngle(steeringAngle);
 
                 // Throttle is proportional to distance but capped at MAX_THROTTLE and at minimum MIN_THROTTLE to ensure the robot keeps moving
                 float throttle = MAX_THROTTLE;
@@ -74,8 +77,8 @@ void guidanceMain(GuidanceData& guidanceData)
                 if(currentAbsoluteSteeringAngle > M_PI) currentAbsoluteSteeringAngle = 2*M_PI - currentAbsoluteSteeringAngle;
                 throttle = clamp(float(throttle - (currentAbsoluteSteeringAngle / MAX_STEERING_ANGLE * (MAX_THROTTLE - MIN_THROTTLE))), MIN_THROTTLE, MAX_THROTTLE);
 
+                if (currentWaypoint.value().reverse) throttle = -throttle;
                 motor.setThrottle(throttle);
-                //printf("Distance %.2f Throttle %.2f\n", distance, throttle);
 
                 // Send values to UI
                 guidanceData.setUiData(steering.getAngle(), motor.getThrottle());
