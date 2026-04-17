@@ -145,7 +145,7 @@ public:
 
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData)
     {
-        printf("Called update!\n");
+        //printf("Called update!\n");
         switch (pathfinderState)
         {
             case PATHFINDER_STATE_INITIAL:
@@ -163,7 +163,7 @@ public:
                 else currentSideIndex--;
                 currentSideIndex = (currentSideIndex + 4) % 4;
                 pathfinderState = PATHFINDER_STATE_SIDES;
-                printf("Init Round: %d Index: %d\n", round, currentSideIndex);
+                //printf("Init Round: %d Index: %d\n", round, currentSideIndex);
                 break;
 
             case PATHFINDER_STATE_SIDES:
@@ -204,13 +204,12 @@ public:
                 currentSideIndex = (currentSideIndex + 4) % 4;
                 if (currentSideIndex == 0) round++;
 
-                printf("Round: %d Index: %d\n", round, currentSideIndex);
+                //printf("Round: %d Index: %d\n", round, currentSideIndex);
 
                 if (round == ROUNDS_TO_DRIVE + 1)
                 {
                     pathfinderState = PATHFINDER_STATE_FINAL;
                     round = ROUNDS_TO_DRIVE;
-                    printf("Here!!!!!\n");
                 }
 
                 break;
@@ -315,9 +314,9 @@ private:
         if (radius2 > radius1 + 0.05 || radius2 < radius1 - 0.05) { printf("Radius missmatch!\n"); return;}
 
         float a1 = atan2f(rel1.y, rel1.x);
-        printf("A1: %.2f ", a1);
+        //printf("A1: %.2f ", a1);
         float a2 = atan2f(rel2.y, rel2.x);
-        printf("A2: %.2f ", a2);
+        //printf("A2: %.2f ", a2);
 
         int j = 10;
         float deltaAngle = 0;
@@ -338,7 +337,7 @@ private:
             float a = a1 + deltaAngle * i;
             output.push_back(Waypoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), 0.0f, false));
             dpd1.appendPoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), RED);
-            printf("A: %.2f\n", a);
+            //printf("A: %.2f\n", a);
         }
 
         gp.update(dpd1);
