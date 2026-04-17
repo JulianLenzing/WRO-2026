@@ -33,6 +33,7 @@ class RobotSystem{
 	bool stopRequested;
 	ObstacleDetection obstacleDetection;
 	Pathfinder pathfinder;
+	enum RUN_DIRECTION runDirection;
 
 	// Pose
 	float heading;
@@ -61,6 +62,7 @@ class RobotSystem{
 		startTime(std::chrono::high_resolution_clock::now()),
 		heading(0.0f),
 		position(0.0f, 0.0f),
+		runDirection(RUN_DIRECTION_CCW),
 		obstacleDetection(),
 		pathfinder()
 	{}

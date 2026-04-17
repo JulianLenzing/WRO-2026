@@ -5,6 +5,8 @@
 #include "State.h"
 #include "RobotSystem.h"
 #include "../RobotSystem.h"
+#include "slam.h"
+#include "../slam.h"
 
 class StartState : public State{
 	void enter(RobotSystem& robot) override 
@@ -26,7 +28,6 @@ class StartState : public State{
 
 		robot.position = Vec2f(1.5f, 0.5f);
 		robot.heading = 0.0f;
-		robot.pathfinder.setRunDirection(RUN_DIRECTION_CCW); // Placeholder until run direction is automatically determined
 
 		// Start Lidar
 		startLidar(robot.lidarDriver);
@@ -38,6 +39,17 @@ class StartState : public State{
 		// Start guidance
 		robot.guidanceData.setRobotData(robot.position, robot.heading);
 		robot.guidanceData.start();
+
+		// Determine run direction
+		LidarScan lidarScan;
+		do
+		{
+			getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
+		}
+		while (!getRunDirection(robot.position, robot.heading, lidarScan, robot.runDirection));
+		if (robot.runDirection == RUN_DIRECTION_CCW) robot.heading = 0;
+		else robot.heading = M_PI;
+		robot.pathfinder.setRunDirection(robot.runDirection);
 	}
 	
 	std::string name() const override {return "StartState";}

@@ -4,6 +4,8 @@
 #include "slam.h"
 #include "LidarPoint.h"
 #include "Landmarks.h"
+#include "Pathfinder.h" // For enum RUN_DIRECTION
+#include "../include/Pathfinder.h"
 
 // Requirements for points to be valid
 #define MIN_POINT_DISTANCE      0.18f
@@ -14,6 +16,10 @@
 // Requirements for points to form a line
 #define MIN_POINTS_FOR_LINE 35
 #define MAX_LINE_DEVIATION 0.349f// Atmost pi/2
+
+// Requirements for the run direction to be determined
+#define MIN_DISTANCE_DIFFERENCE 0.05f
+#define MIN_POINTS_FOR_RUN_DIRECTION 100
 
 using namespace std;
 
@@ -411,4 +417,39 @@ optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& la
     }
     optional<Vec2f> deltaPosition = weightedAngleAverageSegmentIntersections(parallels);
     return deltaPosition;
+}
+
+
+int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_DIRECTION& runDirection)
+{
+    if (scan.scan.size() <= 0) return 0;
+
+    float distanceLeft = 0;
+    float distanceRight = 0;
+
+    int countLeft = 0;
+    int countRight = 0;
+
+    for (auto lp : scan.scan)
+    {
+        if (lp.angle < M_PI && lp.angle > 0)
+        {
+            distanceLeft += lp.distance;
+            countLeft++;
+        }
+        else
+        {
+            distanceRight += lp.distance;
+            countRight++;
+        }
+    }
+
+    if (countLeft <= MIN_POINTS_FOR_RUN_DIRECTION || countRight <= MIN_POINTS_FOR_RUN_DIRECTION) return 0;
+    distanceLeft /= float(countLeft);
+    distanceRight /= float(countRight);
+
+    if (fabs(distanceRight-distanceLeft) < MIN_DISTANCE_DIFFERENCE) return 0;
+    if (distanceLeft > distanceRight) runDirection = RUN_DIRECTION_CCW;
+    else runDirection = RUN_DIRECTION_CW;
+    return 1;
 }

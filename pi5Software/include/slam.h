@@ -11,6 +11,7 @@
 #include "DisplayData.h"
 #include "LidarPoint.h"
 #include "Landmarks.h"
+#include "Pathfinder.h"
 
 using namespace std;
 
@@ -29,5 +30,7 @@ int getDistanceUseablePoints(const LidarScan& scan, LidarScan& useableScan);
 optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& landmarks, Vec2f estimatedPosition);
 
 optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& landmarks, const Vec2f& estimatedPosition);
+
+int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_DIRECTION& runDirection);
 
 #endif //LINE_QUALITY_SLAM_H
