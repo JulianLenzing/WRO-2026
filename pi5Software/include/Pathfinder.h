@@ -11,9 +11,6 @@
 #include "Obstacle.h"
 #include "GuidanceData.h"
 
-#include "Graphics.h"
-#include "DisplayData.h"
-
 #define ROUNDS_TO_DRIVE 3
 #define WAYPOINT_INTERPOLATION_COUNT 15
 
@@ -120,7 +117,7 @@ public:
 class Pathfinder
 {
 public:
-    Pathfinder() : currentSideIndex(0), runDirection(RUN_DIRECTION_CCW), round(1), pathfinderState(PATHFINDER_STATE_INITIAL), stop(false), gp()
+    Pathfinder() : currentSideIndex(0), runDirection(RUN_DIRECTION_CCW), round(1), pathfinderState(PATHFINDER_STATE_INITIAL), stop(false)
     {
         sides.emplace_back(Vec2f(0.0f, 0.0f), float(0.0f), Vec2f(0.9f, 0.0f), Vec2f(2.1f, 1.0f), Vec2f(1.5f, 0.5f));
         sides.emplace_back(Vec2f(3.0f, 0.0f), float(M_PI/2.0f), Vec2f(2.0f, 0.9f), Vec2f(3.0f, 2.1f), Vec2f(2.5f, 1.5f));
@@ -181,6 +178,7 @@ public:
                     {
                         if (obs.count > obstacle.count) obstacle = obs;
                     }
+                    if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
                     //printf("Obstacle position number: %d\n", obstacle.positionNumber);
 
                     sides[currentSideIndex].copyPath(getPathFromObstacle(obstacle));
@@ -242,14 +240,19 @@ private:
     enum RUN_DIRECTION runDirection;
     enum PATHFINDER_STATE pathfinderState;
 
-    Graphics gp;
-    DisplayData dpd1;
-
     Path getPathFromObstacle(const Obstacle& obs)
     {
         // Placeholder until color detection and run direction is added
-        if (obs.positionNumber > 3) return fullOuter;
-        return lightInner;
+        int positionNumber = obs.positionNumber;
+        if (runDirection == RUN_DIRECTION_CW) positionNumber = 7 - positionNumber;
+
+        if (positionNumber <= 3)
+        {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightOuter;
+            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullInner;
+        }
+        if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullOuter;
+        if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightInner;
     }
 
     void generateBezierPositions(const Waypoint& A, const Waypoint& B, const size_t& interpolationCount, std::vector<Vec2f>& positions)
@@ -293,15 +296,9 @@ private:
         Line l1(wp1.point, wp1.point + Vec2f(cosf(wp1.heading+M_PI/2.0f), sinf(wp1.heading+M_PI/2.0f)));
         Line l2(wp2.point, wp2.point + Vec2f(cosf(wp2.heading+M_PI/2.0f), sinf(wp2.heading+M_PI/2.0f)));
 
-        dpd1.appendLine(l1, BLUE);
-        dpd1.appendLine(l2, PINK);
-        dpd1.appendPoint(wp1.point, BLUE);
-        dpd1.appendPoint(wp2.point, PINK);
-
         optional<Vec2f> middle = Line::intersectionInfinite(l1, l2);
         if (!middle.has_value()) return;
 
-        dpd1.appendPoint(middle.value(), RED);
         Vec2f rel1 = wp1.point - middle.value();
         Vec2f rel2 = wp2.point - middle.value();
         float radius1 = rel1.length();
@@ -331,11 +328,7 @@ private:
         {
             float a = a1 + deltaAngle * i;
             output.push_back(Waypoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), 0.0f, false));
-            dpd1.appendPoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), RED);
-            //printf("A: %.2f\n", a);
         }
-
-        gp.update(dpd1);
     }
 
     bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
