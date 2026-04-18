@@ -17,6 +17,7 @@
 #include "Gyro.h"
 #include "ObstacleDetection.h"
 #include "Pathfinder.h"
+#include "Camera.h"
 
 class RobotSystem{
 	public:
@@ -46,11 +47,13 @@ class RobotSystem{
 	sl::ILidarDriver* lidarDriver;
 	EncoderController encoderController;
 	Gyro gyro;
+	Camera camera;
 
 	RobotSystem() :
 		gpioController(),
 		encoderController(gpioController),
 		gyro(),
+		camera(),
 		gp(1000,1000, BLACK),
 		displayUI(visibility),
 		lidarDriver(nullptr),

@@ -181,7 +181,9 @@ class RunCourseState : public State{
             std::vector<Obstacle> obstacles;
             robot.obstacleDetection.getObstacles(obstacles);
             for(const Obstacle& o : obstacles) {
-                dpd.appendPoint(o.position, YELLOW);
+                if (o.getColor() == OBSTACLE_COLOUR_RED) dpd.appendPoint(o.position, RED);
+                else if (o.getColor() == OBSTACLE_COLOUR_GREEN) dpd.appendPoint(o.position, GREEN);
+                else dpd.appendPoint(o.position, YELLOW);
             }
             
             /*--------Update-graphics-----------*/
@@ -202,7 +204,11 @@ class RunCourseState : public State{
             // Update waypoints using obstacles
             std::vector<Obstacle> obstacles;
             robot.obstacleDetection.getObstacles(obstacles);
-            if (robot.guidanceData.getReachedLastWaypoint()) robot.pathfinder.update(robot.position, robot.heading, obstacles, robot.guidanceData);
+            if (robot.guidanceData.getReachedLastWaypoint())
+            {
+                robot.pathfinder.update(robot.position, robot.heading, obstacles, robot.guidanceData);
+            }
+
             if (robot.pathfinder.shouldStop()) robot.stopRequested = true;
         }
 
@@ -222,6 +228,10 @@ class RunCourseState : public State{
             robot.displayUI.round = robot.pathfinder.getRound();
 
             robot.displayUI.update();
+
+
+            // Testing
+            robot.obstacleDetection.feedImage(robot.camera.grabFrame(), robot.position, robot.heading);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }

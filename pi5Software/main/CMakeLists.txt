@@ -8,6 +8,7 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(OpenCV REQUIRED)
 if(NOT SIMULATION)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBGPIOD REQUIRED libgpiod)
@@ -17,6 +18,8 @@ endif()
 if(SIMULATION)
 find_package(glfw3 REQUIRED)
 endif()
+
+# Common components
 
 set(IMGUI_SRC
     ../lib/imgui/imgui.cpp
@@ -37,6 +40,7 @@ add_executable(main
 )
 	
 target_include_directories( main PUBLIC
+	${OpenCV_INCLUDE_DIRS}
 	../include
 	../include/include
 	../include/states
@@ -48,7 +52,10 @@ target_include_directories( main PUBLIC
 
 target_link_libraries(main PRIVATE 
 	OpenGL::GL
+	${OpenCV_LIBS}
 )
+
+# Normal components
 
 if(NOT SIMULATION)
     target_sources(main PRIVATE 
@@ -58,6 +65,7 @@ if(NOT SIMULATION)
 		../src/PwmController.cpp
 		../src/GpioController.cpp
 		../src/Gyro.cpp
+		../src/Camera.cpp
 
 		# Files not needed in a simulation build
 		../src/gpioControl.cpp
@@ -78,6 +86,8 @@ if(NOT SIMULATION)
 	)
 endif()
 
+# Simulation components
+
 if(SIMULATION)
 	target_compile_definitions(main PRIVATE SIMULATION)
 
@@ -87,6 +97,7 @@ if(SIMULATION)
 		../simulation/PwmController.cpp
 		../simulation/GpioController.cpp
 		../simulation/Gyro.cpp
+		../simulation/Camera.cpp
 	)
 
 	target_link_libraries(main PRIVATE 

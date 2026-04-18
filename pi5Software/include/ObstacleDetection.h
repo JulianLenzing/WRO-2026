@@ -6,11 +6,11 @@
 #include "Vec2f.h"
 #include "Obstacle.h"
 #include "LidarPoint.h"
+#include <opencv2/opencv.hpp>
 
 #include "DisplayData.h"
 
 #define OBSTACLE_DETECTION_RADIUS 0.05f
-#define OBSTACLE_DETECTION_COUNT size_t(30)
 
 class ObstacleDetection
 {
@@ -56,10 +56,152 @@ public:
         }
     }
 
+    void feedImage(cv::Mat image, Vec2f position, float heading)
+    {
+        enum OBSTACLE_COLOR obstacleColor = OBSTACLE_COLOUR_UNKNOWN;
+        filterColors(image, obstacleColor);
+        if (obstacleColor != OBSTACLE_COLOUR_UNKNOWN)
+        {
+            Obstacle* closest = nullptr;
+            float shortestSquaredDistance = 16;
+            for (Obstacle& obstacle : possibleObstacles)
+            {
+                if (obstacle.isValid())
+                {
+                    Vec2f rel(obstacle.position - position);
+                    float angle = acosf((rel.x * cosf(heading) + rel.y * sinf(heading)) / rel.length());
+                    if (rel.lengthSquared() < shortestSquaredDistance && fabs(angle) < M_PI/4.0f) // The closest obstacle infront of the robot
+                    {
+                        shortestSquaredDistance = rel.lengthSquared();
+                        closest = &obstacle;
+                    }
+                }
+            }
+            if (!closest) return;
+
+            dpd.appendPoint(closest->position, PINK);
+            if (fabs(closest->colorCount) < 99999) // Overflow protection
+            {
+                if (obstacleColor == OBSTACLE_COLOUR_RED) closest->colorCount++;
+                else closest->colorCount--;
+            }
+        }
+    }
+
+    bool filterColors(cv::Mat display, enum OBSTACLE_COLOR& obstacleColor) {
+        cv::Mat hsv;
+        cv::cvtColor(display, hsv, cv::COLOR_BGR2HSV);
+
+        // ========================
+        // GREEN MASK
+        // ========================
+        cv::Mat greenMask;
+        cv::Scalar greenLower(58, 100, 30);
+        cv::Scalar greenUpper(78, 255, 255);
+        cv::inRange(hsv, greenLower, greenUpper, greenMask);
+
+        // ========================
+        // RED MASK (two ranges)
+        // ========================
+        cv::Mat redMask1, redMask2, redMask;
+
+        cv::Scalar redLower1(0, 150, 30);
+        cv::Scalar redUpper1(10, 255, 255);
+
+        cv::Scalar redLower2(170, 150, 30);
+        cv::Scalar redUpper2(180, 255, 255);
+
+        cv::inRange(hsv, redLower1, redUpper1, redMask1);
+        cv::inRange(hsv, redLower2, redUpper2, redMask2);
+
+        redMask = redMask1 | redMask2;
+
+        // ========================
+        // OPTIONAL: CLEAN NOISE
+        // ========================
+        cv::erode(greenMask, greenMask, cv::Mat(), cv::Point(-1, -1), 2);
+        cv::dilate(greenMask, greenMask, cv::Mat(), cv::Point(-1, -1), 2);
+
+        cv::erode(redMask, redMask, cv::Mat(), cv::Point(-1, -1), 2);
+        cv::dilate(redMask, redMask, cv::Mat(), cv::Point(-1, -1), 2);
+
+        // ========================
+        // FIND CONTOURS
+        // ========================
+        std::vector<std::vector<cv::Point>> greenContours, redContours;
+
+        cv::findContours(greenMask, greenContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(redMask, redContours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+        // ========================
+        // FIND LARGEST OBJECTS
+        // ========================
+        double maxGreenArea = 0;
+        cv::Rect bestGreenRect;
+
+        for (const auto& cnt : greenContours) {
+            double area = cv::contourArea(cnt);
+            if (area > 500 && area > maxGreenArea) {  // ignore small noise
+                maxGreenArea = area;
+                bestGreenRect = cv::boundingRect(cnt);
+            }
+        }
+
+        double maxRedArea = 0;
+        cv::Rect bestRedRect;
+
+        for (const auto& cnt : redContours) {
+            double area = cv::contourArea(cnt);
+            if (area > 500 && area > maxRedArea) {
+                maxRedArea = area;
+                bestRedRect = cv::boundingRect(cnt);
+            }
+        }
+
+        // ========================
+        // DRAW RESULTS
+        // ========================
+        if (maxGreenArea > 0) {
+            cv::rectangle(display, bestGreenRect, cv::Scalar(312, 100, 100), 2);
+        }
+
+        if (maxRedArea > 0) {
+            cv::rectangle(display, bestRedRect, cv::Scalar(312, 100, 100), 2);
+        }
+
+        // ========================
+        // PRINT WHICH IS CLOSER
+        // ========================
+        if (maxGreenArea > 0 || maxRedArea > 0) {
+            if (maxGreenArea > maxRedArea) {
+                std::cout << "Green object is closer\n";
+                obstacleColor = OBSTACLE_COLOUR_GREEN;
+            } else if (maxRedArea > maxGreenArea) {
+                std::cout << "Red object is closer\n";
+                obstacleColor = OBSTACLE_COLOUR_RED;
+            } else {
+                std::cout << "Both are at similar distance\n";
+                return 0;
+            }
+        } else {
+            std::cout << "No objects detected\n";
+            return 0;
+        }
+
+        // ========================
+        // SHOW OUTPUT
+        // ========================
+        cv::imshow("Original with Detection", display);
+        cv::waitKey(1);
+        //cv::imshow("Green Mask", greenMask);
+        //cv::imshow("Red Mask", redMask);
+        return 1;
+    }
+
     void getObstacles(std::vector<Obstacle>& obstacles)
     {
         for(Obstacle o : possibleObstacles) {
-            if(o.count >= OBSTACLE_DETECTION_COUNT) obstacles.push_back(o);
+            if(o.isValid()) obstacles.push_back(o);
         }        
     }
 

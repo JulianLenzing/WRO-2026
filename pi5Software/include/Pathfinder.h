@@ -131,11 +131,6 @@ public:
         finalSide = sides[0];
 
         initPaths();
-
-        Waypoint wp1(Vec2f(1.0f, 0.0f), float(M_PI/2.0f), false);
-        Waypoint wp2(Vec2f(0.0f, 1.0f), float(M_PI), false);
-        std::vector<Waypoint> output;
-        generateCircleSection(wp1, wp2, output);
     }
 
     void setRunDirection(enum RUN_DIRECTION pRunDirection)
