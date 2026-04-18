@@ -191,8 +191,8 @@ public:
         // ========================
         // SHOW OUTPUT
         // ========================
-        cv::imshow("Original with Detection", display);
-        cv::waitKey(1);
+        //cv::imshow("Original with Detection", display);
+        //cv::waitKey(1);
         //cv::imshow("Green Mask", greenMask);
         //cv::imshow("Red Mask", redMask);
         return 1;
