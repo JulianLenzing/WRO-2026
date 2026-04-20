@@ -76,7 +76,7 @@ int Gyro::readRawYaw(float& yaw) {
     int16_t raw = (int16_t)((buffer[1] << 8) | buffer[0]);
     yaw = raw / 32768.0 * M_PI;
     yaw = normaliseAngle(yaw);
-    printf("Angle: %.2f\n", yaw);
+    //printf("Angle: %.2f\n", yaw);
     return 1;
 }
 

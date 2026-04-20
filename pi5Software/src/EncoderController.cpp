@@ -39,7 +39,7 @@ int EncoderController::getEncodingData(float& deltaDistance, float& deltaHeading
     float angleLeft = 0;
     float angleRight = 0;
     if(!grabData(angleLeft, angleRight)) return 0;
-    printf("Left: %.2f Right: %.2f\n", angleLeft, angleRight);
+    //("Left: %.2f Right: %.2f\n", angleLeft, angleRight);
     
     // Handle wrap around and calculate revolutions
     float deltaAngleLeft = angleLeft - lastAngleLeft;
