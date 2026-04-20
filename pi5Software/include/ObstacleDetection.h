@@ -96,8 +96,8 @@ public:
         // GREEN MASK
         // ========================
         cv::Mat greenMask;
-        cv::Scalar greenLower(58, 100, 30);
-        cv::Scalar greenUpper(78, 255, 255);
+        cv::Scalar greenLower(54, 60, 30);
+        cv::Scalar greenUpper(74, 255, 255);
         cv::inRange(hsv, greenLower, greenUpper, greenMask);
 
         // ========================
@@ -105,10 +105,10 @@ public:
         // ========================
         cv::Mat redMask1, redMask2, redMask;
 
-        cv::Scalar redLower1(0, 150, 30);
-        cv::Scalar redUpper1(10, 255, 255);
+        cv::Scalar redLower1(0, 50, 30);
+        cv::Scalar redUpper1(25, 255, 255);
 
-        cv::Scalar redLower2(170, 150, 30);
+        cv::Scalar redLower2(155, 50, 30);
         cv::Scalar redUpper2(180, 255, 255);
 
         cv::inRange(hsv, redLower1, redUpper1, redMask1);
@@ -181,18 +181,22 @@ public:
                 obstacleColor = OBSTACLE_COLOUR_RED;
             } else {
                 std::cout << "Both are at similar distance\n";
+                cv::imshow("Camera", display);
+                cv::waitKey(1);
                 return 0;
             }
         } else {
             std::cout << "No objects detected\n";
+            cv::imshow("Camera", display);
+            cv::waitKey(1);
             return 0;
         }
 
         // ========================
         // SHOW OUTPUT
         // ========================
-        //cv::imshow("Original with Detection", display);
-        //cv::waitKey(1);
+        cv::imshow("Camera", display);
+        cv::waitKey(1);
         //cv::imshow("Green Mask", greenMask);
         //cv::imshow("Red Mask", redMask);
         return 1;

@@ -7,16 +7,17 @@ Camera::Camera()
 	int height = 480;
     // GStreamer pipeline using libcamera
 	std::string pipeline =
-		"libcamerasrc ! "
+		"libcamerasrc analogue-gain-mode=manual analogue-gain=50 ! " // exposure-time-mode=manual exposure-time=1000000000 ! "
 		"video/x-raw,format=NV12,width=1296,height=972,framerate=30/1 ! "
 		"videoconvert ! "
 		"videoscale ! "
 		"video/x-raw,width=" + std::to_string(width) +
 		",height=" + std::to_string(height) +
 		",format=BGR ! "
+		"videoflip method=rotate-180 ! "
 		"appsink drop=true max-buffers=1 sync=false";
-
-    cap.open(pipeline, cv::CAP_GSTREAMER);
+	
+	cap.open(pipeline, cv::CAP_GSTREAMER);
 
     if (!cap.isOpened()) {
         throw std::runtime_error("Failed to open camera via GStreamer");
