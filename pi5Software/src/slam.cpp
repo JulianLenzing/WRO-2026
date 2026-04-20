@@ -420,8 +420,11 @@ optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& la
 }
 
 
-int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_DIRECTION& runDirection)
+int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& inputScan, enum RUN_DIRECTION& runDirection)
 {
+    LidarScan scan;
+    getDistanceUseablePoints(inputScan, scan);
+    
     if (scan.scan.size() <= 0) return 0;
 
     float distanceLeft = 0;
