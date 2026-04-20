@@ -242,17 +242,27 @@ private:
 
     Path getPathFromObstacle(const Obstacle& obs)
     {
-        // Placeholder until color detection and run direction is added
-        int positionNumber = obs.positionNumber;
-        if (runDirection == RUN_DIRECTION_CW) positionNumber = 7 - positionNumber;
-
-        if (positionNumber <= 3)
+        if(runDirection == RUN_DIRECTION_CCW)
         {
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightOuter;
-            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullInner;
+            if (obs.positionNumber <= 3)
+            {
+                if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightOuter;
+                if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullInner;
+            }
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullOuter;
+            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightInner;
         }
-        if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullOuter;
-        if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightInner;
+        else 
+        {
+            if (obs.positionNumber <= 3)
+            {
+                if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullInner;
+                if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightOuter;
+            }
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightInner;
+            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullOuter;
+        
+        }
     }
 
     void generateBezierPositions(const Waypoint& A, const Waypoint& B, const size_t& interpolationCount, std::vector<Vec2f>& positions)
