@@ -17,7 +17,7 @@
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
 #define MAX_THROTTLE 1.0f
-#define MIN_THROTTLE 0.25f
+#define MIN_THROTTLE 0.5f
 #define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
 
 /* Guidance parameters */
@@ -31,7 +31,6 @@ void guidanceMain(GuidanceData& guidanceData)
 	MotorController motor(1, MOTOR_DUTY_CYCLE_RANGE);
     steering.invert();
     steering.setMiddle();
-    motor.unlockControl();
 
     optional<Waypoint> currentWaypoint;
     queue<Vec2f> steeringPointBuffer;

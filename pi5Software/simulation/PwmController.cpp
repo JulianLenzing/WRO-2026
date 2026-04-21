@@ -70,7 +70,7 @@ void PwmController::setMs(float ms) {
 // MotorController Implementation
 // =======================
 MotorController::MotorController(int pLine, float pDutyCycleRange)
-    : PwmController(pLine, pDutyCycleRange), currentThrottle(0.0f)
+    : PwmController(pLine, pDutyCycleRange), currentThrottle(0.0f), directionChangeTime(), directionChange(false), lastNonZeroThrottle(false)
 {
     setThrottle(0.0f);
 }
@@ -78,8 +78,6 @@ MotorController::MotorController(int pLine, float pDutyCycleRange)
 MotorController::~MotorController() {
     setThrottle(0.0f);
 }
-
-void MotorController::unlockControl() { return; }
 
 void MotorController::setThrottle(float pThrottle) {
     pThrottle = std::clamp(pThrottle, -1.0f, 1.0f);
@@ -90,6 +88,15 @@ void MotorController::setThrottle(float pThrottle) {
 }
 
 float MotorController::getThrottle() const { return currentThrottle; }
+
+std::chrono::high_resolution_clock::time_point MotorController::timerStart() {
+    return std::chrono::high_resolution_clock::now();
+}
+
+double MotorController::timerEnd(std::chrono::high_resolution_clock::time_point start) {
+    auto end = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double, std::milli>(end - start).count();
+}
 
 // =======================
 // ServoController Implementation

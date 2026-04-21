@@ -25,23 +25,61 @@ void PwmController::setMs(float ms){
 // Public
 MotorController::MotorController(int pLine, float pDutyCycleRange) 
 : PwmController(pLine, pDutyCycleRange),
-currentThrottle(0.0f)
+currentThrottle(0.0f),
+directionChangeTime(),
+directionChange(false),
+lastNonZeroThrottle(0.1f)
 {}
 
 MotorController::~MotorController(){
-    setThrottle(0.0f);
+    setMs(1.5f);
 }
     
-void MotorController::unlockControl() { setMs(1.5); }
-
 void MotorController::setThrottle(float pThrottle) {
     pThrottle = std::clamp(pThrottle, -1.0f, 1.0f);
     currentThrottle = pThrottle;
+    
+    if((lastNonZeroThrottle > 0 && pThrottle < 0) || directionChange)
+    {        
+        if(!directionChange) {
+            directionChange = true;
+            directionChangeTime = timerStart();
+        }
+        
+        double time = timerEnd(directionChangeTime);
+        if(time >= 500.0f){
+            directionChange = false;
+            currentThrottle = pThrottle;
+        }
+        else if(time >= 0.0f && time <= 200.0f) {
+            setMs(1.0f);
+            currentThrottle = -1.0f;
+            return; 
+        }        
+        else
+        {
+            setMs(1.5f);
+            currentThrottle = 0.0f;
+            return; 
+        }
+    }    
+    
+    if(pThrottle > 0.001f || pThrottle < -0.001f) lastNonZeroThrottle = pThrottle;
+    
     float ms = 1.5f + pThrottle * (dutyCycleRange / 2.0f);
     setMs(ms);
 } 
 
 float MotorController::getThrottle() const { return currentThrottle; }
+
+std::chrono::high_resolution_clock::time_point MotorController::timerStart() {
+    return std::chrono::high_resolution_clock::now();
+}
+
+double MotorController::timerEnd(std::chrono::high_resolution_clock::time_point start) {
+    auto end = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<double, std::milli>(end - start).count();
+}
 
 /*Subclass ServoController*/
 // Public
