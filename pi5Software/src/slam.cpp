@@ -216,8 +216,11 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
             //printf("Inconsistent corresponding landmark indices: %d and %d on index %d\n", correspondingIndex[i-1], correspondingIndex[i], i);
         }
     }
-    lp.lmIndex = correspondingIndex[0]; 
+    lp.lmIndex = correspondingIndex[0];
     //printf("Index: %d\n", lp.lmIndex);
+
+    // Check if the landmark the point lays on is useable
+    if (!environment.landmarks[lp.lmIndex].isUseable) return false;
     
     // Check if the point is at a reasonable distance from the expected position of the landmark if it is closer it may be an obstacle
     Line line(estimatedPosition, Vec2f(estimatedPosition.x + dir.x * 1000, estimatedPosition.y + dir.y * 1000));

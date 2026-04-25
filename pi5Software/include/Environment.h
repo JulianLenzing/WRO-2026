@@ -2,7 +2,9 @@
 
 #include <vector>
 
+#include "Run_Type.h"
 #include "Line.h"
+#include "RobotSystem.h"
 #include "Vec2f.h"
 
 class Landmark
@@ -18,7 +20,7 @@ public:
 
 class Environment {
 public:
-    Environment() {
+    Environment(const RUN_TYPE& runType) {
         float outerLength = 3.0f;
         float innerLength = 1.0f;
         outerBottomLeft = Vec2f(0, 0);
@@ -26,15 +28,25 @@ public:
         outerTopRight = Vec2f(outerLength, outerLength);        
         innerTopRight = innerBottomLeft + Vec2f(innerLength, innerLength);
         middle = outerBottomLeft + Vec2f(outerLength, outerLength) * 0.5f;
+        bool innerBoundariesAreUseable = true;
 
-        landmarks.emplace_back(Landmark(outerBottomLeft, Vec2f(0, outerLength)));
-        landmarks.emplace_back(Landmark(Vec2f(0, outerLength), Vec2f(outerLength, outerLength)));
-        landmarks.emplace_back(Landmark(Vec2f(outerLength, outerLength), Vec2f(outerLength, 0)));
-        landmarks.emplace_back(Landmark(Vec2f(outerLength, 0), Vec2f(0, 0)));
-        landmarks.emplace_back(Landmark(innerBottomLeft, innerBottomLeft + Vec2f(0, innerLength)));
-        landmarks.emplace_back(Landmark(innerBottomLeft + Vec2f(0, innerLength), innerTopRight));
-        landmarks.emplace_back(Landmark(innerTopRight, innerBottomLeft + Vec2f(innerLength, 0)));
-        landmarks.emplace_back(Landmark(innerBottomLeft + Vec2f(innerLength, 0), innerBottomLeft));
+        if (runType == RUN_TYPE_OPENING_RUN)
+        {
+            innerBoundariesAreUseable = false;
+            innerBottomLeft = Vec2f(0.6f, 0.6f);
+            innerTopRight = Vec2f(2.4f, 2.4f);
+            innerLength = 1.8f;
+        }
+
+        landmarks.emplace_back(Landmark(outerBottomLeft, Vec2f(0, outerLength), true));
+        landmarks.emplace_back(Landmark(Vec2f(0, outerLength), Vec2f(outerLength, outerLength), true));
+        landmarks.emplace_back(Landmark(Vec2f(outerLength, outerLength), Vec2f(outerLength, 0), true));
+        landmarks.emplace_back(Landmark(Vec2f(outerLength, 0), Vec2f(0, 0), true));
+
+        landmarks.emplace_back(Landmark(innerBottomLeft, innerBottomLeft + Vec2f(0, innerLength), innerBoundariesAreUseable));
+        landmarks.emplace_back(Landmark(innerBottomLeft + Vec2f(0, innerLength), innerTopRight, innerBoundariesAreUseable));
+        landmarks.emplace_back(Landmark(innerTopRight, innerBottomLeft + Vec2f(innerLength, 0), innerBoundariesAreUseable));
+        landmarks.emplace_back(Landmark(innerBottomLeft + Vec2f(innerLength, 0), innerBottomLeft, innerBoundariesAreUseable));
     }
     
     std::vector<Landmark> landmarks;

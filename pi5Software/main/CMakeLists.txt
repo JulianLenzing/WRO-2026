@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.1.6)
-project(main)
-
-option(SIMULATION "Enable support for the godot simulation" OFF)
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Debug)
+project(main)
 
 find_package(Threads REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -55,6 +52,16 @@ target_link_libraries(main PRIVATE
 	${OpenCV_LIBS}
 )
 
+option(OPENING_RUN "Prepare the software for variable dimensions of the inner Walls and no obstacles" OFF)
+if(OPENING_RUN)
+	target_compile_definitions(main PRIVATE OPENING_RUN)
+endif()
+
+option(SIMULATION "Enable support for the godot simulation" OFF)
+if(SIMULATION)
+	target_compile_definitions(main PRIVATE SIMULATION)
+endif()
+
 # Normal components
 
 if(NOT SIMULATION)
@@ -89,8 +96,6 @@ endif()
 # Simulation components
 
 if(SIMULATION)
-	target_compile_definitions(main PRIVATE SIMULATION)
-
 	target_sources(main PRIVATE 
 		../simulation/lidar.cpp
 		../simulation/EncoderController.cpp

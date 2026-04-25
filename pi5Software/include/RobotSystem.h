@@ -18,6 +18,7 @@
 #include "ObstacleDetection.h"
 #include "Pathfinder.h"
 #include "Camera.h"
+#include "Run_Type.h"
 
 class RobotSystem{
 	public:
@@ -35,6 +36,12 @@ class RobotSystem{
 	ObstacleDetection obstacleDetection;
 	Pathfinder pathfinder;
 	enum RUN_DIRECTION runDirection;
+
+#ifndef OPENING_RUN
+	static constexpr enum RUN_TYPE runType = RUN_TYPE_OBSTACLE_RUN;
+#else
+	static constexpr enum RUN_TYPE runType = RUN_TYPE_OPENING_RUN;
+#endif
 
 	// Pose
 	float heading;
@@ -57,7 +64,7 @@ class RobotSystem{
 		gp(1000,1000, BLACK),
 		displayUI(visibility),
 		lidarDriver(nullptr),
-		environment(),
+		environment(runType),
 		guidanceThread(guidanceMain, ref(guidanceData)),
 		startActivated(false),
 		stopRequested(false),

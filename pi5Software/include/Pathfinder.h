@@ -137,7 +137,6 @@ public:
 
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData)
     {
-        //printf("Called update!\n");
         switch (pathfinderState)
         {
             case PATHFINDER_STATE_INITIAL:
@@ -262,82 +261,6 @@ private:
             if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightInner;
             if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullOuter;
         
-        }
-    }
-
-    void generateBezierPositions(const Waypoint& A, const Waypoint& B, const size_t& interpolationCount, std::vector<Vec2f>& positions)
-    {
-        // Form bezier curve using DeCasteljau algorithm after https://www.cubic.org/docs/bezier.htm
-        Vec2f a(A.point);
-        Vec2f d(B.point);
-        Vec2f b(a + Vec2f(cosf(A.heading), sinf(A.heading)) * 0.1);
-        Vec2f c(d - Vec2f(cosf(B.heading), sinf(B.heading)) * 0.25f);
-
-        for (int i=0; i<interpolationCount; ++i)
-        {
-            Vec2f p;
-            float t = static_cast<float>(i)/float(interpolationCount-1);
-            bezier(p,a,b,c,d,t);
-            positions.push_back(p);
-        }
-    }
-
-    // simple linear interpolation between two points
-    void lerp(Vec2f& dest, const Vec2f& a, const Vec2f& b, const float t)
-    {
-        dest.x = a.x + (b.x-a.x)*t;
-        dest.y = a.y + (b.y-a.y)*t;
-    }
-
-    // evaluate a point on a bezier-curve. t goes from 0 to 1.0
-    void bezier(Vec2f &dest, const Vec2f& a, const Vec2f& b, const Vec2f& c, const Vec2f& d, const float t)
-    {
-        Vec2f ab,bc,cd,abbc,bccd;
-        lerp(ab, a,b,t);           // point between a and b (green)
-        lerp(bc, b,c,t);           // point between b and c (green)
-        lerp(cd, c,d,t);           // point between c and d (green)
-        lerp(abbc, ab,bc,t);       // point between ab and bc (blue)
-        lerp(bccd, bc,cd,t);       // point between bc and cd (blue)
-        lerp(dest, abbc,bccd,t);   // point on the bezier-curve (black)
-    }
-
-    void generateCircleSection(Waypoint wp1, Waypoint wp2, std::vector<Waypoint>& output)
-    {
-        Line l1(wp1.point, wp1.point + Vec2f(cosf(wp1.heading+M_PI/2.0f), sinf(wp1.heading+M_PI/2.0f)));
-        Line l2(wp2.point, wp2.point + Vec2f(cosf(wp2.heading+M_PI/2.0f), sinf(wp2.heading+M_PI/2.0f)));
-
-        optional<Vec2f> middle = Line::intersectionInfinite(l1, l2);
-        if (!middle.has_value()) return;
-
-        Vec2f rel1 = wp1.point - middle.value();
-        Vec2f rel2 = wp2.point - middle.value();
-        float radius1 = rel1.length();
-        float radius2 = rel2.length();
-        if (radius2 > radius1 + 0.05 || radius2 < radius1 - 0.05) { printf("Radius missmatch!\n"); return;}
-
-        float a1 = atan2f(rel1.y, rel1.x);
-        //printf("A1: %.2f ", a1);
-        float a2 = atan2f(rel2.y, rel2.x);
-        //printf("A2: %.2f ", a2);
-
-        int j = 10;
-        float deltaAngle = 0;
-        if (a1 <= M_PI )
-        {
-            if (a2 - a1 <= M_PI) deltaAngle = (a2-a1) / float(j);
-            else deltaAngle = (a2 - 2.0f*M_PI - a1) / float(j);
-        }
-        else if (a1 > M_PI)
-        {
-            if (a2 >= a1) deltaAngle = (a2-a1) / float(j);
-            else if (a2 > a1-M_PI) deltaAngle = (a2 - a1) / float(j);
-            else deltaAngle = (a2 + 2.0f*M_PI - a1) / float(j);
-        }
-
-        for (int i = 0; i < j; i++)
-        {
-            float a = a1 + deltaAngle * i;
-            output.push_back(Waypoint(Vec2f(middle.value().x + cosf(a) * radius1, middle.value().y + sinf(a) * radius1), 0.0f, false));
         }
     }
 
