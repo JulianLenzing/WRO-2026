@@ -3,7 +3,7 @@
 
 #include "slam.h"
 #include "LidarPoint.h"
-#include "Landmarks.h"
+#include "Environment.h"
 #include "Pathfinder.h" // For enum RUN_DIRECTION
 #include "../include/Pathfinder.h"
 
@@ -148,7 +148,7 @@ bool isPointDistanceUseable(const LidarPoint& lp, const float& minDistance, cons
 }
     
 
-bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Landmarks lms) {
+bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Environment environment) {
     if(!isPointDistanceUseable(lp, minDistance, maxDistance)) return false;
     
     // Direction check
@@ -165,10 +165,10 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
     // Process positions
     for(auto& p : maxPos) {
         // Clamp to within landmark boundaries to avoid out of bounds errors in intersection calculation
-        p.x = clamp(p.x, lms.outerBottomLeft.x + 0.001f, lms.outerTopRight.x - 0.001f);
-        p.y = clamp(p.y, lms.outerBottomLeft.y + 0.001f, lms.outerTopRight.y - 0.001f);
+        p.x = clamp(p.x, environment.outerBottomLeft.x + 0.001f, environment.outerTopRight.x - 0.001f);
+        p.y = clamp(p.y, environment.outerBottomLeft.y + 0.001f, environment.outerTopRight.y - 0.001f);
 
-        if(p.x > lms.innerBottomLeft.x && p.x < lms.innerTopRight.x && p.y > lms.innerBottomLeft.y && p.y < lms.innerTopRight.y) {
+        if(p.x > environment.innerBottomLeft.x && p.x < environment.innerTopRight.x && p.y > environment.innerBottomLeft.y && p.y < environment.innerTopRight.y) {
             // If the point is within the inner square it is not useable as it cannot be uniquely assigned to a landmark
             p = estimatedPosition; // Set to estimated position so it does not affect intersection calculation but also does not cause out of bounds errors
         }
@@ -182,8 +182,8 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
         //displayLines.push_back(line);
         // Get all intersections
         vector<intersectionIndexPair> intersections;
-        for (int j = 0; j < lms.lines.size(); j++) {
-            optional<Vec2f> p = Line::intersectionSegment(line, lms.lines[j]);
+        for (int j = 0; j < environment.landmarks.size(); j++) {
+            optional<Vec2f> p = Line::intersectionSegment(line, environment.landmarks[j].line);
             if (p) {
                 intersections.push_back(intersectionIndexPair(j, p.value()));
             }
@@ -222,8 +222,8 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
     // Check if the point is at a reasonable distance from the expected position of the landmark if it is closer it may be an obstacle
     Line line(estimatedPosition, Vec2f(estimatedPosition.x + dir.x * 1000, estimatedPosition.y + dir.y * 1000));
     vector<intersectionIndexPair> intersections;
-    for (int j = 0; j < lms.lines.size(); j++) {
-        optional<Vec2f> p = Line::intersectionSegment(line, lms.lines[j]);
+    for (int j = 0; j < environment.landmarks.size(); j++) {
+        optional<Vec2f> p = Line::intersectionSegment(line, environment.landmarks[j].line);
         if (p) {
             intersections.push_back(intersectionIndexPair(j, p.value()));
         }
@@ -248,10 +248,10 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
     return true;
 }
 
-int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Landmarks& landmarks, LidarScan& useableScan) {
+int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan) {
     int useablePointCount = 0;
     for (LidarPoint& lp : scan.scan) {
-        if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, landmarks)) {
+        if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, environment)) {
             useableScan.scan.push_back(lp);
             //printf("Usable Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
             useablePointCount++;
@@ -357,10 +357,10 @@ optional<float> compareLines(const Line& a, const Line& b) {
     return angleDiff; 
 }
 
-optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& landmarks, Vec2f estimatedPosition) { // Position is only here for debugging and or visualisation
+optional<float> lidarEstimateHeading(const LidarScan& scan, const Environment& environment, Vec2f estimatedPosition) { // Position is only here for debugging and or visualisation
     float angleSum = 0.0f;
     int count = 0;
-    for(int i = 0; i < landmarks.lines.size(); i++) {
+    for(int i = 0; i < environment.landmarks.size(); i++) {
         vector<Vec2f> points;
         for(const LidarPoint& lp : scan.scan) {
             if(lp.lmIndex != -1) {
@@ -374,7 +374,7 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& lan
             Line line = linearRegression(points);
             Line absLine = Line(line.start+estimatedPosition, line.end+estimatedPosition);
             dpd.appendLine(absLine, GRAY, SLAM_DEBUG_LINE);
-            optional<float> angle = compareLines(landmarks.lines[i], line);
+            optional<float> angle = compareLines(environment.landmarks[i].line, line);
             if(angle.has_value()) {
                 angleSum += angle.value();
                 count++;
@@ -387,25 +387,25 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Landmarks& lan
     return -angleSum / float(count); // - to convert from landmark-to-scan angle to robot heading error angle
 }
 
-optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Landmarks& landmarks, const Vec2f& estimatedPosition) {
+optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Environment& environment, const Vec2f& estimatedPosition) {
     vector<Line> parallels;
     for (auto lp : scan.scan) {
         //printf("Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
         if(lp.lmIndex == -1) continue; // Skip if no corresponding landmark (should not happen if all points are useable)
 
-        Vec2f normal = landmarks.lines[lp.lmIndex].normal();
+        Vec2f normal = environment.landmarks[lp.lmIndex].line.normal();
         Vec2f normalOpposite = normal * -1.0f;
 
         float perpendicularDistance = lp.distance * fabs(lp.getDirection().dot(normal));
-        Line parallel1 = landmarks.lines[lp.lmIndex];
+        Line parallel1 = environment.landmarks[lp.lmIndex].line;
         parallel1.start += normal * perpendicularDistance;
         parallel1.end += normal * perpendicularDistance;
 
-        Line parallel2 = landmarks.lines[lp.lmIndex];
+        Line parallel2 = environment.landmarks[lp.lmIndex].line;
         parallel2.start += normalOpposite * perpendicularDistance;
         parallel2.end += normalOpposite * perpendicularDistance;
 
-        Vec2f point = landmarks.lines[lp.lmIndex].closestPointOnInfinite(estimatedPosition);
+        Vec2f point = environment.landmarks[lp.lmIndex].line.closestPointOnInfinite(estimatedPosition);
         float fit1 = Vec2f::pointingTowards(point, normal, estimatedPosition);
         float fit2 = Vec2f::pointingTowards(point, normalOpposite, estimatedPosition);
         Line parallel;

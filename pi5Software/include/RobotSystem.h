@@ -13,7 +13,7 @@
 #include "sl_lidar_driver.h"
 #include "GpioController.h"
 #include "EncoderController.h"
-#include "Landmarks.h"
+#include "Environment.h"
 #include "Gyro.h"
 #include "ObstacleDetection.h"
 #include "Pathfinder.h"
@@ -28,7 +28,7 @@ class RobotSystem{
 	std::thread guidanceThread;
 	std::chrono::high_resolution_clock::time_point initTime;
 	std::chrono::high_resolution_clock::time_point startTime;
-	Landmarks landmarks;
+	Environment environment;
 	GuidanceData guidanceData;
 	bool startActivated;
 	bool stopRequested;
@@ -57,7 +57,7 @@ class RobotSystem{
 		gp(1000,1000, BLACK),
 		displayUI(visibility),
 		lidarDriver(nullptr),
-		landmarks(),
+		environment(),
 		guidanceThread(guidanceMain, ref(guidanceData)),
 		startActivated(false),
 		stopRequested(false),

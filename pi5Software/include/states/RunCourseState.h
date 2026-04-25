@@ -89,7 +89,7 @@ class RunCourseState : public State{
             else robot.displayUI.encoderStatus = true;
             #ifndef USE_ENCODER_FOR_HEADING
                 robot.position += Vec2f(cosf(robot.heading), sinf(robot.heading)) * deltaDistance;
-                robot.position = boundPosition(robot.position, robot.landmarks);
+                robot.position = boundPosition(robot.position, robot.environment);
             #endif
             #ifdef USE_ENCODER_FOR_HEADING
                 float midHeading = robot.heading + deltaHeading * 0.5f;
@@ -113,7 +113,10 @@ class RunCourseState : public State{
             dpd.appendPoint(robot.position, RED, ESTIMATED_POSITION_POINT);
             float length = 0.15f;
             dpd.appendLine(Line(robot.position, Vec2f(robot.position.x + cos(robot.heading) * length, robot.position.y + sin(robot.heading) * length)), RED);
-            dpd.appendLines(robot.landmarks.lines, WHITE, LANDMARK_LINE);
+            for (int i = 0; i < robot.environment.landmarks.size(); i++)
+            {
+                dpd.appendLine(robot.environment.landmarks[i].line, WHITE, LANDMARK_LINE);
+            }
 
             LidarScan lidarScan;
             getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
@@ -121,11 +124,11 @@ class RunCourseState : public State{
             float beginningHeading = robot.heading;
 
             LidarScan useableScan;
-            getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);
+            getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
             
             std::optional<float> lidarHeading;
             lidarHeading.reset();
-            std::optional<float> maybeNewEstimatedHeading = lidarEstimateHeading(useableScan, robot.landmarks, robot.position);            
+            std::optional<float> maybeNewEstimatedHeading = lidarEstimateHeading(useableScan, robot.environment, robot.position);
              if(maybeNewEstimatedHeading.has_value()) {
                 float error = maybeNewEstimatedHeading.value();
                 lidarHeading = robot.heading + error;
@@ -137,7 +140,7 @@ class RunCourseState : public State{
                 // The useable points are reassigned to ensure greater accuracy             
                 lidarScan.rotate(error);
                 useableScan.scan.clear();
-                getUsablePoints(lidarScan, robot.position, robot.landmarks, useableScan);    
+                getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
 
                 //printf("Error: %.2f Alpha: %.2f Added Heading: %.2f\n", error, alpha, error * (1.0f-alpha));
                 //cout << "Lidar heading: " << maybeNewEstimatedHeading.value() / M_PI * 180 << " degrees" << endl;
@@ -151,13 +154,13 @@ class RunCourseState : public State{
             for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
             for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + robot.position, BLUE, USEABLE_LIDAR_POINT_POINT);}
 
-            auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.landmarks, robot.position);
+            auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.environment, robot.position);
 
             if(maybeNewEstimatedPosition.has_value()) {
                 Vec2f error = maybeNewEstimatedPosition.value() - robot.position;
                 float alpha = std::exp(-lidarDt.count() / 1000.0f / LIDAR_POSITION_TAU);
                 robot.position += error * (1.0f - alpha);
-                robot.position = boundPosition(robot.position, robot.landmarks);
+                robot.position = boundPosition(robot.position, robot.environment);
 
                 Vec2f tmp = maybeNewEstimatedPosition.value();
                 dpd.appendPoint(tmp, YELLOW, NEW_ESTIMATED_POSITION_POINT);
@@ -245,9 +248,9 @@ class RunCourseState : public State{
     std::chrono::high_resolution_clock::time_point lastGuidanceUpdateTime;
     std::chrono::high_resolution_clock::time_point lastUIUpdateTime;
 
-    Vec2f boundPosition(Vec2f position, Landmarks lms) {
-        position.x = std::max(lms.outerBottomLeft.x, std::min(position.x, lms.outerTopRight.x));
-        position.y = std::max(lms.outerBottomLeft.y, std::min(position.y, lms.outerTopRight.y));
+    Vec2f boundPosition(Vec2f position, Environment environment) {
+        position.x = std::max(environment.outerBottomLeft.x, std::min(position.x, environment.outerTopRight.x));
+        position.y = std::max(environment.outerBottomLeft.y, std::min(position.y, environment.outerTopRight.y));
         return position;
     }
 };
