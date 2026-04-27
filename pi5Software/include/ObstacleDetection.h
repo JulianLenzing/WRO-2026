@@ -10,7 +10,7 @@
 
 #include "DisplayData.h"
 
-#define OBSTACLE_DETECTION_RADIUS 0.05f
+#define OBSTACLE_DETECTION_RADIUS 0.1f
 
 class ObstacleDetection
 {
@@ -27,7 +27,6 @@ public:
         };
 
         Vec2f pivot(1.5f, 1.5f);
-
         for (const auto& p : basePoints) {
             Obstacle current = p;
 
@@ -96,8 +95,14 @@ public:
         // GREEN MASK
         // ========================
         cv::Mat greenMask;
-        cv::Scalar greenLower(54, 60, 30);
-        cv::Scalar greenUpper(74, 255, 255);
+        #ifndef SIMULATION
+        cv::Scalar greenLower(40, 100, 60);
+        cv::Scalar greenUpper(65, 255, 255);
+        #endif
+        #ifdef SIMULATION
+        cv::Scalar greenLower(40, 100, 60);
+        cv::Scalar greenUpper(75, 255, 255);
+        #endif
         cv::inRange(hsv, greenLower, greenUpper, greenMask);
 
         // ========================
@@ -105,10 +110,10 @@ public:
         // ========================
         cv::Mat redMask1, redMask2, redMask;
 
-        cv::Scalar redLower1(0, 50, 30);
-        cv::Scalar redUpper1(25, 255, 255);
+        cv::Scalar redLower1(0, 160, 110);
+        cv::Scalar redUpper1(5, 255, 255);
 
-        cv::Scalar redLower2(155, 50, 30);
+        cv::Scalar redLower2(155, 130, 110);
         cv::Scalar redUpper2(180, 255, 255);
 
         cv::inRange(hsv, redLower1, redUpper1, redMask1);

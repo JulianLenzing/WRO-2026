@@ -7,7 +7,7 @@ Camera::Camera()
 	int height = 480;
     // GStreamer pipeline using libcamera
 	std::string pipeline =
-		"libcamerasrc analogue-gain-mode=manual analogue-gain=50 ! " // exposure-time-mode=manual exposure-time=1000000000 ! "
+		"libcamerasrc awb-enable=true awb-mode=daylight ae-enable=true ae-constraint-mode=shadows ae-metering-mode=matrix ! "// analogue-gain-mode=manual analogue-gain=1 ! "// exposure-time-mode=manual exposure-time=1000000000 ! "
 		"video/x-raw,format=NV12,width=1296,height=972,framerate=30/1 ! "
 		"videoconvert ! "
 		"videoscale ! "
