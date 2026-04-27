@@ -4,7 +4,6 @@
 
 #include "Run_Type.h"
 #include "Line.h"
-#include "RobotSystem.h"
 #include "Vec2f.h"
 
 class Landmark
