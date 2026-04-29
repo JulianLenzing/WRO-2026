@@ -66,7 +66,7 @@ public:
         // direction vector of THIS line
         Vec2f dir = end - start;
 
-        // perpendicular: (x, y) → (−y, x)
+        // perpendicular: (x, y) → (−y, x) points to the left
         Vec2f n(-dir.y, dir.x);
 
         // normalize

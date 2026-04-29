@@ -83,15 +83,13 @@ class RunCourseState : public State{
             lastLidarUpdateTime = now;
 
             // Setup graphics for new frame
+            dpd.clear();
+            dpd.appendPoint(robot.position, RED, ESTIMATED_POSITION_POINT);
+            float length = 0.15f;
+            dpd.appendLine(Line(robot.position, Vec2f(robot.position.x + cos(robot.heading) * length, robot.position.y + sin(robot.heading) * length)), RED);
+            for (int i = 0; i < robot.environment.landmarks.size(); i++)
             {
-                dpd.clear();
-                dpd.appendPoint(robot.position, RED, ESTIMATED_POSITION_POINT);
-                float length = 0.15f;
-                dpd.appendLine(Line(robot.position, Vec2f(robot.position.x + cos(robot.heading) * length, robot.position.y + sin(robot.heading) * length)), RED);
-                for (int i = 0; i < robot.environment.landmarks.size(); i++)
-                {
-                    dpd.appendLine(robot.environment.landmarks[i].line, WHITE, LANDMARK_LINE);
-                }
+                dpd.appendLine(robot.environment.landmarks[i].line, WHITE, LANDMARK_LINE);
             }
 
             LidarScan lidarScan;

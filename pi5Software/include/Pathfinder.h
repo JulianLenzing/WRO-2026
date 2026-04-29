@@ -10,9 +10,16 @@
 #include "Waypoint.h"
 #include "Obstacle.h"
 #include "GuidanceData.h"
+#include "Run_Type.h"
+
+#include "Graphics.h"
+#include "DisplayData.h"
+#include <chrono>
+#include <thread>
 
 #define ROUNDS_TO_DRIVE 3
 #define WAYPOINT_INTERPOLATION_COUNT 15
+#define MIN_TURN_RADIUS 0.2f
 
 enum RUN_DIRECTION
 {
@@ -102,6 +109,17 @@ public:
             Vec2f v2 = d * projection;
             Vec2f v3 = p - v2 * 2;
             wp.point = v3;
+
+            printf("Old heading: %.2f\n", wp.heading);
+            // Reflect heading across perpendicular to d (matches point mirroring)
+            Vec2f hv(cosf(wp.heading), sinf(wp.heading));
+
+            float dot = hv.x * d.x + hv.y * d.y;
+            Vec2f hv_mirrored = hv - d * (2.0f * dot);  // reflect across perp of d
+
+            wp.heading = atan2f(hv_mirrored.y, hv_mirrored.x);
+            if (wp.heading < 0) wp.heading += 2.0f * M_PI;
+            printf("New Heading: %.2f\n", wp.heading);
         }
     }
 
@@ -117,113 +135,11 @@ public:
 class Pathfinder
 {
 public:
-    Pathfinder() : currentSideIndex(0), runDirection(RUN_DIRECTION_CCW), round(1), pathfinderState(PATHFINDER_STATE_INITIAL), stop(false)
-    {
-        sides.emplace_back(Vec2f(0.0f, 0.0f), float(0.0f), Vec2f(0.9f, 0.0f), Vec2f(2.1f, 1.0f), Vec2f(1.5f, 0.5f));
-        sides.emplace_back(Vec2f(3.0f, 0.0f), float(M_PI/2.0f), Vec2f(2.0f, 0.9f), Vec2f(3.0f, 2.1f), Vec2f(2.5f, 1.5f));
-        sides.emplace_back(Vec2f(3.0f, 3.0f), float(M_PI), Vec2f(0.9f, 2.0f), Vec2f(2.1f, 3.0f), Vec2f(1.5f, 2.5f));
-        sides.emplace_back(Vec2f(0.0f, 3.0f), float(3.0f*M_PI/2.0f), Vec2f(0.0f, 0.9f), Vec2f(1.0f, 2.1f), Vec2f(0.5f, 1.5f));
+    Pathfinder(const RUN_TYPE& pRunType);
 
-        initialSide = sides[0];
-        finalSide = sides[0];
+    void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData);
 
-        initPaths();
-    }
-
-    void setRunDirection(enum RUN_DIRECTION pRunDirection)
-    {
-        runDirection = pRunDirection;
-    }
-
-    void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData)
-    {
-        switch (pathfinderState)
-        {
-            case PATHFINDER_STATE_INITIAL:
-                initialSide.copyPath(initial);
-                if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath();
-
-                // Append the waypoints of the chosen path and correct for run direction
-                for (const Waypoint& wp : initialSide.path.waypoints)
-                {
-                    guidanceData.appendWaypoint(wp);
-                }
-
-                // Index to next side
-                if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-                else currentSideIndex--;
-                currentSideIndex = (currentSideIndex + 4) % 4;
-                pathfinderState = PATHFINDER_STATE_SIDES;
-                //printf("Init Round: %d Index: %d\n", round, currentSideIndex);
-                break;
-
-            case PATHFINDER_STATE_SIDES:
-                //printf("Current Index: %d\n", currentSideIndex);
-                if (!sides[currentSideIndex].hasPath)
-                {
-                    // If the current side does not have a path one must be determined
-                    std::vector<Obstacle> sideObstacles;
-                    for (const Obstacle& obs : obstacles)
-                    {
-                        if (inBox(obs.position, sides[currentSideIndex].lowerLeft, sides[currentSideIndex].upperRight))
-                        {
-                            sideObstacles.push_back(obs);
-                        }
-                    }
-                    //printf("Number of obstacles in side: %d\n", sideObstacles.size());
-                    if (sideObstacles.size() <= 0) return; // Wait until an obstacle in the current side was detected
-                    Obstacle obstacle = sideObstacles[0];
-                    for (const Obstacle& obs : sideObstacles)
-                    {
-                        if (obs.count > obstacle.count) obstacle = obs;
-                    }
-                    if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
-                    //printf("Obstacle position number: %d\n", obstacle.positionNumber);
-
-                    sides[currentSideIndex].copyPath(getPathFromObstacle(obstacle));
-                    if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath();
-                }
-
-                // Append the waypoints of the chosen path and correct for run direction
-                for (const Waypoint& wp : sides[currentSideIndex].path.waypoints)
-                {
-                    guidanceData.appendWaypoint(wp);
-                }
-
-                // Index to next side
-                if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-                else currentSideIndex--;
-                currentSideIndex = (currentSideIndex + 4) % 4;
-                if (currentSideIndex == 0) round++;
-
-                //printf("Round: %d Index: %d\n", round, currentSideIndex);
-
-                if (round == ROUNDS_TO_DRIVE + 1)
-                {
-                    pathfinderState = PATHFINDER_STATE_FINAL;
-                    round = ROUNDS_TO_DRIVE;
-                }
-
-                break;
-
-            case PATHFINDER_STATE_FINAL:
-                finalSide.copyPath(final);
-                if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath();
-
-                // Append the waypoints of the chosen path and correct for run direction
-                for (const Waypoint& wp : finalSide.path.waypoints)
-                {
-                    guidanceData.appendWaypoint(wp);
-                }
-
-                pathfinderState = PATHFINDER_STATE_STOP;
-                break;
-
-            case PATHFINDER_STATE_STOP:
-                if (guidanceData.getReachedLastWaypoint()) stop = true;
-                break;
-        }
-    }
+    void setRunDirection(enum RUN_DIRECTION pRunDirection) {runDirection = pRunDirection;}
 
     size_t getRound() {return round;}
 
@@ -238,31 +154,9 @@ private:
     bool stop;
     enum RUN_DIRECTION runDirection;
     enum PATHFINDER_STATE pathfinderState;
+    const RUN_TYPE runType;
 
-    Path getPathFromObstacle(const Obstacle& obs)
-    {
-        if(runDirection == RUN_DIRECTION_CCW)
-        {
-            if (obs.positionNumber <= 3)
-            {
-                if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightOuter;
-                if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullInner;
-            }
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullOuter;
-            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightInner;
-        }
-        else 
-        {
-            if (obs.positionNumber <= 3)
-            {
-                if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullInner;
-                if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightOuter;
-            }
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightInner;
-            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullOuter;
-        
-        }
-    }
+    Path getPathFromObstacle(const Obstacle& obs);
 
     bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
     {
@@ -273,6 +167,7 @@ private:
         return false;
     }
 
+    // Obstacle run
     Path initial;
     Path final;
     Path fullInner;
@@ -280,74 +175,110 @@ private:
     Path lightOuter;
     Path fullOuter;
 
-    void initPaths()
+    // Opening run
+    Path openingRunInitial;
+    Path openingRunFinal;
+    Path openingRunPath;
+
+    void initPaths();
+
+    float normaliseAngle(float angle)
     {
-        // Base Values
-        const float xFirstWaypoint{0.9f};
-        const float xSecondWaypoint{1.5f};
-        const float xThirdWaypoint{2.0f};
+        return fmodf(fmodf(angle, 2.0f*M_PI)+2.0f*M_PI, 2.0f*M_PI);
+    }
 
-        const float yFullInner{0.8f};
-        const float yLightInner{0.7f};
-        const float yLightOuter{0.3f};
-        const float yFullOuter{0.2f};
+    void turnWrapper(std::vector<Waypoint>& output)
+    {
+        if (output.size() >= 2)
+        {
+            Waypoint wp2 = output.back();
+            output.pop_back();
+            generateCircleSection(output.back(), wp2, output);
+        }
+    }
 
-        // Initial
-        initial.name = "Initial";
-        initial.waypoints.clear();
-        initial.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
-        initial.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
-        initial.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.5f), 0.0f, false));
-        initial.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.7f), 0.0f, true));
-        initial.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), 0.0f, true, true));
+    float toRad(float degrees)
+    {
+        return degrees * M_PI / 180.0f;
+    }
 
-        // Final
-        final.name = "Final";
-        final.waypoints.clear();
-        final.waypoints.push_back(Waypoint(Vec2f(1.0f, 0.5f), 0.0f, false));
-        final.waypoints.push_back(Waypoint(Vec2f(1.5f, 0.5f), 0.0f, true));
+    void generateCircleSection(Waypoint wp1, Waypoint wp2, std::vector<Waypoint>& output)
+    {
+        if (wp2.reverse)
+        {
+            wp1.heading += M_PI;
+            wp2.heading += M_PI;
+        }
 
-        // Full inner
-        fullInner.name = "Full inner";
-        fullInner.waypoints.clear();
-        fullInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), M_PI/2.0f, false));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullInner), 0.0f, false));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.3f), 0.0f, false));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.6f, 0.7f), 0.0f, true));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.45f), 0.0f, true, true));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), 0.0f, true, true));
+        wp1.heading = normaliseAngle(wp1.heading);
+        wp2.heading = normaliseAngle(wp2.heading);
 
-        // Light inner
-        lightInner.name = "Light inner";
-        lightInner.waypoints.clear();
-        lightInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightInner), 0.0f, false));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightInner), 0.0f, false));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, true));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.4f), 0.0f, false));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.6f, 0.6f), 0.0f, true));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.55f, 0.35f), 0.0f, true, true));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.58f, 0.2f), 0.0f, true, true));
+        Line n1(wp1.point, wp1.point + Vec2f(cosf(wp1.heading+M_PI/2.0f), sinf(wp1.heading+M_PI/2.0f)));
+        Line n2(wp2.point, wp2.point + Vec2f(cosf(wp2.heading+M_PI/2.0f), sinf(wp2.heading+M_PI/2.0f)));
 
-        // Light outer
-        lightOuter.name = "Light outer";
-        lightOuter.waypoints.clear();
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightOuter), 0.0f, false));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightOuter), 0.0f, false));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightOuter), 0.0f, true));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.2f, 0.3f), 0.0f, false));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), 0.0f, true));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), 0.0f, true, true));
+        Line l1(wp1.point, wp1.point + Vec2f(cosf(wp1.heading), sinf(wp1.heading)));
+        Line l2(wp2.point, wp2.point + Vec2f(cosf(wp2.heading), sinf(wp2.heading)));
 
-        // Full outer
-        fullOuter.name = "Full outer";
-        fullOuter.waypoints.clear();
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullOuter), 0.0f, false));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullOuter), 0.0f, false));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, true));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), 0.0f, true));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), 0.0f, true, true));
+        optional<Vec2f> center;
+        if (normaliseAngle(wp1.heading+M_PI) > normaliseAngle(wp2.heading+0.05) || normaliseAngle(wp1.heading+M_PI) < normaliseAngle(wp2.heading-0.05))
+        {
+            center = Line::intersectionInfinite(n1, n2);
+        }
+        else
+        {
+            center = (wp1.point+wp2.point) / 2.0f;
+        }
+        if (!center.has_value()) return;
+
+        Vec2f rel1 = wp1.point - center.value();
+        Vec2f rel2 = wp2.point - center.value();
+        float radius1 = rel1.length();
+        float radius2 = rel2.length();
+
+        if (radius1 < radius2 - 0.01f || radius2 > radius1 + 0.01f)
+        {
+            printf("Radius missmatch!\n");
+            return;
+        }
+
+        float radius = radius1;
+        if (radius < MIN_TURN_RADIUS)
+        {
+            printf("Warning! Radius smaller than minimum turn radius!\n");
+        }
+
+        float circumference = 2.0f * radius * M_PI;
+        float sectionSize;
+        bool ccw = true;
+        if ((rel1.x > 0 && wp1.heading > M_PI) || (rel1.x < 0 && wp1.heading < M_PI) || (rel1.y > 0 && wp1.heading == 0.0f) || (rel1.y < 0 && wp1.heading == M_PI))
+        {
+            ccw = false;
+        }
+
+        if (ccw) sectionSize = normaliseAngle(atan2f(rel1.x, rel1.y) - atan2f(rel2.x, rel2.y)) / (2.0f*M_PI);
+        else sectionSize = normaliseAngle(atan2f(rel2.x, rel2.y) - atan2f(rel1.x, rel1.y)) / (2.0f*M_PI);
+
+        Waypoint wp(wp2);
+        wp.point = wp1.point;
+        wp.heading = wp1.heading;
+
+        int interpolationCount = clamp(int(sectionSize * 50.0f), 5, 99999);
+        float distance = circumference * sectionSize / float(interpolationCount);
+        float angle = 2.0f*M_PI * sectionSize / float(interpolationCount);
+        if (!ccw) angle = -angle;
+        for (int i = 0; i < interpolationCount; i++)
+        {
+            float middleHeading = normaliseAngle(wp.heading + angle/2.0f);
+            wp.heading += angle;
+            wp.heading = normaliseAngle(wp.heading);
+
+            wp.point += Vec2f(cosf(middleHeading), sinf(middleHeading)) * distance;
+
+            Waypoint copy = wp;
+            if (wp2.reverse) copy.heading = fmodf(copy.heading + M_PI, 2.0f*M_PI); // Return with heading facing the right way again
+            output.push_back(copy);
+        }
+
     }
 };
     

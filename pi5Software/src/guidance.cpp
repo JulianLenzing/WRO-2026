@@ -17,11 +17,12 @@
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
 #define MAX_THROTTLE 1.0f
-#define MIN_THROTTLE 0.5f
+#define MIN_THROTTLE 0.25f
 #define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
 
 /* Guidance parameters */
-#define WAYPOINT_THRESHOLD 0.1f
+#define WAYPOINT_THRESHOLD 0.05f
+#define PASSED_WAYPOINT_THRESHOLD 0.15f
 
 using namespace std;
 
@@ -34,9 +35,13 @@ void guidanceMain(GuidanceData& guidanceData)
 
     optional<Waypoint> currentWaypoint;
     queue<Vec2f> steeringPointBuffer;
-    bool atWaypoint = false;
     float heading = 0;
     Vec2f position(0, 0);
+    float lastDistance = 0;
+
+    #ifdef SIMULATION
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    #endif
 
     while (guidanceData.getThreadStatus())
     {        
@@ -51,6 +56,7 @@ void guidanceMain(GuidanceData& guidanceData)
                 {
                     currentWaypoint = guidanceData.getWaypoint();
                     guidanceData.setReachedLastWaypoint(false);
+                    lastDistance = (currentWaypoint.value().point - position).length();
                 }
                 else guidanceData.setReachedLastWaypoint(true);
             }
@@ -61,7 +67,20 @@ void guidanceMain(GuidanceData& guidanceData)
                 float distance = Vec2f(currentWaypoint.value().point - position).length();
 
                 // Set steering and throttle
-                float direction = atan2f(currentWaypoint.value().point.y - position.y, currentWaypoint.value().point.x - position.x);
+                Vec2f waypointDirectionVector = Vec2f(cosf(currentWaypoint.value().heading), sinf(currentWaypoint.value().heading));
+                Line waypointLine(currentWaypoint.value().point, currentWaypoint.value().point + waypointDirectionVector);
+                Vec2f closestPointOnLine = waypointLine.closestPointOnInfinite(position);
+                Vec2f relativePosition = position - closestPointOnLine;
+                float lineDistance = relativePosition.length();
+
+                float direction = currentWaypoint.value().heading; // = atan2f(currentWaypoint.value().point.y - position.y, currentWaypoint.value().point.x - position.x);
+                float closingAngle = clamp(lineDistance, 0.0f, 1.0f) * (M_PI/2.0f);
+
+                if (relativePosition.dot(waypointLine.normal()) > 0.0f) closingAngle = -closingAngle;
+                if (currentWaypoint.value().reverse) closingAngle = -closingAngle;
+                direction += closingAngle;
+                if (currentWaypoint.value().reverse) direction += M_PI;
+
                 float steeringAngle;
                 if (!currentWaypoint.value().reverse) steeringAngle = direction-heading;
                 else steeringAngle = fmodf(heading+M_PI, 2.0f*M_PI) - direction;
@@ -83,7 +102,15 @@ void guidanceMain(GuidanceData& guidanceData)
                 guidanceData.setUiData(steering.getAngle(), motor.getThrottle());
 
                 // Check if we are at the waypoint and if so reset the current waypoint to get the next one from the queue
-                if(distance < WAYPOINT_THRESHOLD) currentWaypoint.reset();
+                float deltaDistance = distance - lastDistance;
+                Vec2f relativePositionToWp = position - currentWaypoint.value().point;
+                if(
+                    distance < WAYPOINT_THRESHOLD
+                    || (deltaDistance > 0.0f && distance < PASSED_WAYPOINT_THRESHOLD)
+                    || (relativePositionToWp.dot(waypointDirectionVector) > 0.0f && !currentWaypoint.value().reverse)
+                    || (relativePositionToWp.dot(waypointDirectionVector) < 0.0f && currentWaypoint.value().reverse)
+                    ) currentWaypoint.reset();
+                lastDistance = distance;
             }
             else {
                 /* Lock steering and stop motor if no current waypoint is set*/

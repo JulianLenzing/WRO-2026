@@ -74,6 +74,6 @@ class RobotSystem{
 		position(0.0f, 0.0f),
 		runDirection(RUN_DIRECTION_CCW),
 		obstacleDetection(),
-		pathfinder()
+		pathfinder(runType)
 	{}
 };

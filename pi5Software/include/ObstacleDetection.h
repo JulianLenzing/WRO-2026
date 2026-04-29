@@ -11,6 +11,7 @@
 #include "DisplayData.h"
 
 #define OBSTACLE_DETECTION_RADIUS 0.1f
+#define HORIZONTAL_CAMERA_FOV 0.925023722f
 
 class ObstacleDetection
 {
@@ -69,7 +70,7 @@ public:
                 {
                     Vec2f rel(obstacle.position - position);
                     float angle = acosf((rel.x * cosf(heading) + rel.y * sinf(heading)) / rel.length());
-                    if (rel.lengthSquared() < shortestSquaredDistance && fabs(angle) < M_PI/4.0f) // The closest obstacle infront of the robot
+                    if (rel.lengthSquared() < shortestSquaredDistance && fabs(angle) < HORIZONTAL_CAMERA_FOV / 2.0f) // The closest obstacle infront of the robot
                     {
                         shortestSquaredDistance = rel.lengthSquared();
                         closest = &obstacle;
@@ -100,8 +101,8 @@ public:
         cv::Scalar greenUpper(65, 255, 255);
         #endif
         #ifdef SIMULATION
-        cv::Scalar greenLower(40, 100, 60);
-        cv::Scalar greenUpper(75, 255, 255);
+        cv::Scalar greenLower(40, 50, 50);
+        cv::Scalar greenUpper(90, 255, 255);
         #endif
         cv::inRange(hsv, greenLower, greenUpper, greenMask);
 

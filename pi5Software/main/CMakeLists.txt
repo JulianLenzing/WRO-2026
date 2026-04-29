@@ -34,6 +34,7 @@ add_executable(main
 	../src/glad.c
 	../src/guidance.cpp
 	../src/slam.cpp
+	../src/Pathfinder.cpp
 )
 	
 target_include_directories( main PUBLIC
