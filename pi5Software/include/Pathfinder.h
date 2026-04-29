@@ -12,11 +12,6 @@
 #include "GuidanceData.h"
 #include "Run_Type.h"
 
-#include "Graphics.h"
-#include "DisplayData.h"
-#include <chrono>
-#include <thread>
-
 #define ROUNDS_TO_DRIVE 3
 #define WAYPOINT_INTERPOLATION_COUNT 15
 #define MIN_TURN_RADIUS 0.2f
