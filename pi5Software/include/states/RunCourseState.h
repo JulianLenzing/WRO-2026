@@ -153,7 +153,9 @@ class RunCourseState : public State{
                 }
                 std::vector<Obstacle> obstacles;
                 robot.obstacleDetection.getObstacles(obstacles);
-                for(const Obstacle& o : obstacles) {
+                std::vector<Obstacle> filteredObstacles;
+                robot.pathfinder.filterObstacles(obstacles, filteredObstacles);
+                for(const Obstacle& o : filteredObstacles) {
                     if (o.getColor() == OBSTACLE_COLOUR_RED) dpd.appendPoint(o.position, RED);
                     else if (o.getColor() == OBSTACLE_COLOUR_GREEN) dpd.appendPoint(o.position, GREEN);
                     else dpd.appendPoint(o.position, YELLOW);
@@ -174,7 +176,11 @@ class RunCourseState : public State{
             if(cameraDt >= std::chrono::milliseconds(CAMERA_UPDATE_TIME)) {
                 lastCameraUpdateTime = now;
 
-                robot.obstacleDetection.feedImage(robot.camera.grabFrame(), robot.position, robot.heading);
+                std::vector<Obstacle> obstacles;
+                std::vector<Obstacle> filteredObstacles;
+                robot.obstacleDetection.getObstacles(obstacles);
+                robot.pathfinder.filterObstacles(obstacles, filteredObstacles);
+                robot.obstacleDetection.feedImage(robot.camera.grabFrame(), filteredObstacles, robot.position, robot.heading);
             }
         }
 

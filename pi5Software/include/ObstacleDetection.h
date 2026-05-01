@@ -56,7 +56,7 @@ public:
         }
     }
 
-    void feedImage(cv::Mat image, Vec2f position, float heading)
+    void feedImage(cv::Mat image, std::vector<Obstacle> filteredObstacles, Vec2f position, float heading)
     {
         enum OBSTACLE_COLOR obstacleColor = OBSTACLE_COLOUR_UNKNOWN;
         filterColors(image, obstacleColor);
@@ -64,7 +64,7 @@ public:
         {
             Obstacle* closest = nullptr;
             float shortestSquaredDistance = 16;
-            for (Obstacle& obstacle : possibleObstacles)
+            for (Obstacle& obstacle : filteredObstacles)
             {
                 if (obstacle.isValid())
                 {
@@ -79,11 +79,17 @@ public:
             }
             if (!closest) return;
 
-            dpd.appendPoint(closest->position, PINK);
-            if (fabs(closest->colorCount) < 99999) // Overflow protection
+            for (Obstacle& ownObstacle : possibleObstacles) 
             {
-                if (obstacleColor == OBSTACLE_COLOUR_RED) closest->colorCount++;
-                else closest->colorCount--;
+                if(ownObstacle.position == closest->position)
+                {
+                    if (fabs(ownObstacle.colorCount) < 99999) // Overflow protection
+                    {
+                        if (obstacleColor == OBSTACLE_COLOUR_RED) ownObstacle.colorCount++;
+                        else ownObstacle.colorCount--;
+                    }
+                    break;
+                }
             }
         }
     }

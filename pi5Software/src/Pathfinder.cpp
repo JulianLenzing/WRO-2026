@@ -1,7 +1,5 @@
 #include "Pathfinder.h"
-#include "../include/Pathfinder.h"
-
-#include "../include/Run_Type.h"
+#include "Run_Type.h"
 
 Pathfinder::Pathfinder(const RUN_TYPE& pRunType) : runType(pRunType), currentSideIndex(0), runDirection(RUN_DIRECTION_CCW), round(1), pathfinderState(PATHFINDER_STATE_INITIAL), stop(false)
 {
@@ -14,6 +12,28 @@ Pathfinder::Pathfinder(const RUN_TYPE& pRunType) : runType(pRunType), currentSid
     finalSide = sides[0];
 
     initPaths();
+}
+
+void Pathfinder::filterObstacles(std::vector<Obstacle> obstacles,  std::vector<Obstacle>& output){
+    output.clear();
+    for(int i = 0; i < 4; i++)
+    {
+        std::vector<Obstacle> sideObstacles;
+        for (const Obstacle& obs : obstacles)
+        {
+            if (inBox(obs.position, sides[i].lowerLeft, sides[i].upperRight))
+            {
+                sideObstacles.push_back(obs);
+            }
+        }
+        if (sideObstacles.size() <= 0) continue;
+        Obstacle obstacle = sideObstacles[0];
+        for (const Obstacle& obs : sideObstacles)
+        {
+            if (obs.count > obstacle.count) obstacle = obs;
+        }
+        output.push_back(obstacle);
+    }
 }
 
 void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData)

@@ -11,6 +11,7 @@
 #include "Obstacle.h"
 #include "GuidanceData.h"
 #include "Run_Type.h"
+#include "Line.h"
 
 #define ROUNDS_TO_DRIVE 3
 #define WAYPOINT_INTERPOLATION_COUNT 15
@@ -133,6 +134,8 @@ public:
     Pathfinder(const RUN_TYPE& pRunType);
 
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData);
+    
+    void filterObstacles(std::vector<Obstacle> obstacles,  std::vector<Obstacle>& output);
 
     void setRunDirection(enum RUN_DIRECTION pRunDirection) {runDirection = pRunDirection;}
 
@@ -214,7 +217,7 @@ private:
         Line l1(wp1.point, wp1.point + Vec2f(cosf(wp1.heading), sinf(wp1.heading)));
         Line l2(wp2.point, wp2.point + Vec2f(cosf(wp2.heading), sinf(wp2.heading)));
 
-        optional<Vec2f> center;
+        std::optional<Vec2f> center;
         if (normaliseAngle(wp1.heading+M_PI) > normaliseAngle(wp2.heading+0.05) || normaliseAngle(wp1.heading+M_PI) < normaliseAngle(wp2.heading-0.05))
         {
             center = Line::intersectionInfinite(n1, n2);
@@ -257,7 +260,7 @@ private:
         wp.point = wp1.point;
         wp.heading = wp1.heading;
 
-        int interpolationCount = clamp(int(sectionSize * 50.0f), 5, 99999);
+        int interpolationCount = std::clamp(int(sectionSize * 50.0f), 5, 99999);
         float distance = circumference * sectionSize / float(interpolationCount);
         float angle = 2.0f*M_PI * sectionSize / float(interpolationCount);
         if (!ccw) angle = -angle;
