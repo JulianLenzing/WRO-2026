@@ -35,6 +35,7 @@ add_executable(main
 	../src/guidance.cpp
 	../src/slam.cpp
 	../src/Pathfinder.cpp
+	../src/sensorUpdateFunctions.cpp
 )
 	
 target_include_directories( main PUBLIC
