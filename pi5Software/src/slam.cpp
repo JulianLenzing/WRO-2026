@@ -10,8 +10,6 @@
 // Requirements for points to be valid
 #define MIN_POINT_DISTANCE      0.18f
 #define MAX_POINT_DISTANCE      3.65f
-#define MAX_DELTA_POSITION      0.2f
-#define MAX_DISTANCE_DEVIATION  0.25f
 
 // Requirements for points to form a line
 #define MIN_POINTS_FOR_LINE 35
@@ -148,15 +146,15 @@ bool isPointDistanceUseable(const LidarPoint& lp, const float& minDistance, cons
 }
     
 
-bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Environment environment) {
+bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Environment environment, float maxDeltaPosition, float maxDistanceDeviation = 0.25f) {
     if(!isPointDistanceUseable(lp, minDistance, maxDistance)) return false;
     
     // Direction check
     Vec2f dir = lp.getDirection();
     constexpr int size = 4;
     Vec2f maxPos[size];
-    Vec2f xRange(estimatedPosition.x - MAX_DELTA_POSITION, estimatedPosition.x + MAX_DELTA_POSITION);
-    Vec2f yRange(estimatedPosition.y - MAX_DELTA_POSITION, estimatedPosition.y + MAX_DELTA_POSITION);
+    Vec2f xRange(estimatedPosition.x - maxDeltaPosition, estimatedPosition.x + maxDeltaPosition);
+    Vec2f yRange(estimatedPosition.y - maxDeltaPosition, estimatedPosition.y + maxDeltaPosition);
     maxPos[0] = Vec2f(xRange.x,yRange.x);
     maxPos[1] = Vec2f(xRange.x,yRange.y);
     maxPos[2] = Vec2f(xRange.y,yRange.y);
@@ -243,18 +241,18 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
         }
     
         lowestDistance = sqrtf(lowestDistance);
-        if(lowestDistance + MAX_DISTANCE_DEVIATION < lp.distance) return false;
-        if(lowestDistance - MAX_DISTANCE_DEVIATION > lp.distance) return false;
+        if(lowestDistance + maxDistanceDeviation < lp.distance) return false;
+        if(lowestDistance - maxDistanceDeviation > lp.distance) return false;
     }
     else return false;
 
     return true;
 }
 
-int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan) {
+int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan, float maxDeltaPosition, float maxDistanceDeviation) {
     int useablePointCount = 0;
     for (LidarPoint& lp : scan.scan) {
-        if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, environment)) {
+        if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, environment, maxDeltaPosition, maxDistanceDeviation)) {
             useableScan.scan.push_back(lp);
             //printf("Usable Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
             useablePointCount++;

@@ -31,8 +31,6 @@ class RobotSystem{
 	std::chrono::high_resolution_clock::time_point startTime;
 	Environment environment;
 	GuidanceData guidanceData;
-	bool startActivated;
-	bool stopRequested;
 	ObstacleDetection obstacleDetection;
 	Pathfinder pathfinder;
 	enum RUN_DIRECTION runDirection;
@@ -66,8 +64,6 @@ class RobotSystem{
 		lidarDriver(nullptr),
 		environment(runType),
 		guidanceThread(guidanceMain, ref(guidanceData)),
-		startActivated(false),
-		stopRequested(false),
 		initTime(std::chrono::high_resolution_clock::now()),
 		startTime(std::chrono::high_resolution_clock::now()),
 		heading(0.0f),

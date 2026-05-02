@@ -14,11 +14,12 @@ class StartState : public State{
 		robot.gpioController.setLed1High();
 	}
 
-    void update(RobotSystem& robot) override
+    bool update(RobotSystem& robot) override
     {
-		if(robot.gpioController.queryButton()) robot.startActivated = true;
+		if(robot.gpioController.queryButton()) return true;
 		robot.displayUI.update();
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		return false;
     }
     
     void exit(RobotSystem& robot) override 
@@ -35,21 +36,13 @@ class StartState : public State{
 		// Init other sensors
 		robot.encoderController.reset();
 		robot.gyro.reset();
+		std::vector<Obstacle> tmp;
+		// Feed one frame before driving to avoid lag while driving; The list of obstacles is empty so no data can be messed up
+		robot.obstacleDetection.feedImage(robot.camera.grabFrame(), tmp, Vec2f(0.0f, 0.0f), 0.0f);
 		
 		// Start guidance
 		robot.guidanceData.setRobotData(robot.position, robot.heading);
 		robot.guidanceData.start();
-
-		// Determine run direction
-		LidarScan lidarScan;
-		do
-		{
-			getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
-		}
-		while (!getRunDirection(robot.position, robot.heading, lidarScan, robot.runDirection));
-		if (robot.runDirection == RUN_DIRECTION_CCW) robot.heading = 0;
-		else robot.heading = M_PI;
-		robot.pathfinder.setRunDirection(robot.runDirection);
 	}
 	
 	std::string name() const override {return "StartState";}

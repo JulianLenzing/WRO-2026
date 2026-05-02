@@ -38,7 +38,7 @@ public:
         uITimer.reset();
     }
 
-    void update(RobotSystem& robot) override
+    bool update(RobotSystem& robot) override
     {
         #ifndef USE_ENCODER_FOR_HEADING
         /*----------Gyro-loop----------*/
@@ -82,7 +82,7 @@ public:
                 robot.pathfinder.update(robot.position, robot.heading, obstacles, robot.guidanceData);
             }
 
-            if (robot.pathfinder.shouldStop()) robot.stopRequested = true;
+            if (robot.pathfinder.shouldStop()) return true;
 
             guidanceTimer.reset();
         }
@@ -103,6 +103,7 @@ public:
             uITimer.reset();
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        return false;
     }
     
     std::string name() const override {return "RunCourseState";}

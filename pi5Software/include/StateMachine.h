@@ -27,8 +27,9 @@ public:
 		}
     }
 
-    void update(RobotSystem& robot)
+    bool update(RobotSystem& robot)
     {
-        if(current) current->update(robot);
+        if(current) if (current->update(robot)) return true;
+        return false;
     }
 };

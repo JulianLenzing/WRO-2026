@@ -17,9 +17,9 @@ class InitState : public State{
         robot.initTime = std::chrono::high_resolution_clock::now();
     }
 
-    void update(RobotSystem& robot) override
+    bool update(RobotSystem& robot) override
     {
-        // transition condition handled externally
+        return true;
     }
     
     std::string name() const override {return "InitState";}

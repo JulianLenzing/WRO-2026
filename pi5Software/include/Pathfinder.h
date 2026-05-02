@@ -136,8 +136,12 @@ public:
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData);
     
     void filterObstacles(std::vector<Obstacle> obstacles,  std::vector<Obstacle>& output);
+    
+    bool getSideObstacle(std::vector<Obstacle> obstacles, int sideIndex, Obstacle& obstacle);
 
     void setRunDirection(enum RUN_DIRECTION pRunDirection) {runDirection = pRunDirection;}
+
+    void setStartingPosition(Vec2f position);
 
     size_t getRound() {return round;}
 
@@ -153,6 +157,7 @@ private:
     enum RUN_DIRECTION runDirection;
     enum PATHFINDER_STATE pathfinderState;
     const RUN_TYPE runType;
+    bool startedLeft;
 
     Path getPathFromObstacle(const Obstacle& obs);
 
@@ -175,7 +180,8 @@ private:
 
     // Opening run
     Path openingRunInitial;
-    Path openingRunFinal;
+    Path openingRunFinalLeft;
+    Path openingRunFinalRight;
     Path openingRunPath;
 
     void initPaths();

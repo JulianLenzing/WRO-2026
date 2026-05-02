@@ -15,8 +15,8 @@ class StopState : public State{
     }
   }
 
-  void update(RobotSystem& robot) override {
-    // transition condition handled externally
+  bool update(RobotSystem& robot) override {
+    return true;
   }
     
   std::string name() const override {return "StopState";}

@@ -23,7 +23,7 @@ struct intersectionIndexPair {
 void generateTestPoints(vector<LidarPoint>& lidarPoints, const Vec2f& pos, const vector<Line>& lms,
     const float& angleNoiseStdDeg = 2.0f, const float& distanceNoiseStd = 0.2f, const int& rayCount = 50);
 
-int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan);
+int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan, float maxDeltaDistance = 0.2f, float maxDistanceDeviation = 0.25f);
 
 int getDistanceUseablePoints(const LidarScan& scan, LidarScan& useableScan);
 

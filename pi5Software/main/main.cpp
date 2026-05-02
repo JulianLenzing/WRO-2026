@@ -10,6 +10,7 @@
 #include "StartState.h"
 #include "RunCourseState.h"
 #include "StopState.h"
+#include "../include/states/FindPositionState.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -58,24 +59,26 @@ int main(){
 	StateMachine sm;
 	InitState initState;
 	StartState startState;
+	FindPositionState findPositionState;
 	RunCourseState runCourseState;
 	StopState stopState;
 
 	sm.setState(&initState, robot);
 	sm.setState(&startState, robot);
-	while(!robot.displayUI.start && !robot.startActivated)
+	while(!robot.displayUI.start && !sm.update(robot))
 	{
-		sm.update(robot);
 		if(robot.displayUI.exit) {
 			sm.setState(&stopState, robot);
 			return 0;
 		}
 	}
+
+	sm.setState(&findPositionState, robot);
+	while (!sm.update(robot)){}
 	
 	sm.setState(&runCourseState, robot);
-	while(!robot.stopRequested){
-		sm.update(robot);
-		if( robot.displayUI.exit) break;
+	while(!sm.update(robot)){
+		if(robot.displayUI.exit) break;
 	}
 
 	sm.setState(&stopState, robot);
