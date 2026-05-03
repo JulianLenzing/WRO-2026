@@ -19,6 +19,7 @@
 #include "Pathfinder.h"
 #include "Camera.h"
 #include "Run_Type.h"
+#include "Slam.h"
 
 class RobotSystem{
 	public:
@@ -34,6 +35,8 @@ class RobotSystem{
 	ObstacleDetection obstacleDetection;
 	Pathfinder pathfinder;
 	enum RUN_DIRECTION runDirection;
+	Slam slam;
+	Slam initSlam; // Slam used for initial pose estimation
 
 #ifndef OPENING_RUN
 	static constexpr enum RUN_TYPE runType = RUN_TYPE_OBSTACLE_RUN;
@@ -67,9 +70,14 @@ class RobotSystem{
 		initTime(std::chrono::high_resolution_clock::now()),
 		startTime(std::chrono::high_resolution_clock::now()),
 		heading(0.0f),
+		slam(),
+		initSlam(),
 		position(0.0f, 0.0f),
 		runDirection(RUN_DIRECTION_CCW),
 		obstacleDetection(),
 		pathfinder(runType)
-	{}
+	{
+		initSlam.minPointDistance = 0.05f;
+		initSlam.maxDistanceDeviation = 0.7f;
+	}
 };

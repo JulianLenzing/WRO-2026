@@ -105,8 +105,7 @@ public:
             Vec2f v2 = d * projection;
             Vec2f v3 = p - v2 * 2;
             wp.point = v3;
-
-            printf("Old heading: %.2f\n", wp.heading);
+            
             // Reflect heading across perpendicular to d (matches point mirroring)
             Vec2f hv(cosf(wp.heading), sinf(wp.heading));
 
@@ -115,7 +114,6 @@ public:
 
             wp.heading = atan2f(hv_mirrored.y, hv_mirrored.x);
             if (wp.heading < 0) wp.heading += 2.0f * M_PI;
-            printf("New Heading: %.2f\n", wp.heading);
         }
     }
 

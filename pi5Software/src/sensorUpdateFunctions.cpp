@@ -64,11 +64,11 @@ void updateLidar(RobotSystem& robot, std::chrono::milliseconds lidarDt)
     float beginningHeading = robot.heading;
 
     LidarScan useableScan;
-    getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
+    robot.slam.getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
 
     std::optional<float> lidarHeading;
     lidarHeading.reset();
-    std::optional<float> maybeNewEstimatedHeading = lidarEstimateHeading(useableScan, robot.environment, robot.position);
+    std::optional<float> maybeNewEstimatedHeading = robot.slam.lidarEstimateHeading(useableScan, robot.environment, robot.position);
      if(maybeNewEstimatedHeading.has_value()) {
         float error = maybeNewEstimatedHeading.value();
         lidarHeading = robot.heading + error;
@@ -80,7 +80,7 @@ void updateLidar(RobotSystem& robot, std::chrono::milliseconds lidarDt)
         // The useable points are reassigned to ensure greater accuracy
         lidarScan.rotate(error);
         useableScan.scan.clear();
-        getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
+        robot.slam.getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
 
         robot.displayUI.lidarHeadingStatus = true;
     }
@@ -90,7 +90,7 @@ void updateLidar(RobotSystem& robot, std::chrono::milliseconds lidarDt)
     for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
     for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + robot.position, BLUE, USEABLE_LIDAR_POINT_POINT);}
 
-    auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.environment, robot.position);
+    auto maybeNewEstimatedPosition = robot.slam.lidarEstimatePosition(useableScan, robot.environment, robot.position);
 
     if(maybeNewEstimatedPosition.has_value()) {
         Vec2f error = maybeNewEstimatedPosition.value() - robot.position;
@@ -112,7 +112,7 @@ void updateLidar(RobotSystem& robot, std::chrono::milliseconds lidarDt)
     if (robot.runType == RUN_TYPE_OBSTACLE_RUN)
     {
         useableScan.scan.clear();
-        getDistanceUseablePoints(lidarScan, useableScan);
+        robot.slam.getDistanceUseablePoints(lidarScan, useableScan);
         robot.obstacleDetection.feedScan(useableScan, robot.position);
         for(const Obstacle& o : robot.obstacleDetection.possibleObstacles) {
             dpd.appendPoint(o.position, GRAY);

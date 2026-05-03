@@ -6,7 +6,7 @@
 
 #include "RobotSystem.h"
 #include "DisplayData.h"
-#include "slam.h"
+#include "Slam.h"
 
 //#define USE_ENCODER_FOR_HEADING
 

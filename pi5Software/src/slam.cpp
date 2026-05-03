@@ -1,27 +1,15 @@
 #include <cmath>
 #include <algorithm>
 
-#include "slam.h"
+#include "Slam.h"
 #include "LidarPoint.h"
 #include "Environment.h"
 #include "Pathfinder.h" // For enum RUN_DIRECTION
 #include "../include/Pathfinder.h"
 
-// Requirements for points to be valid
-#define MIN_POINT_DISTANCE      0.18f
-#define MAX_POINT_DISTANCE      3.65f
-
-// Requirements for points to form a line
-#define MIN_POINTS_FOR_LINE 35
-#define MAX_LINE_DEVIATION 0.349f// Atmost pi/2
-
-// Requirements for the run direction to be determined
-#define MIN_DISTANCE_DIFFERENCE 0.05f
-#define MIN_POINTS_FOR_RUN_DIRECTION 100
-
 using namespace std;
 
-static float angleWeight(const Line& a, const Line& b)
+float Slam::angleWeight(const Line& a, const Line& b)
 {
     Vec2f A = a.direction();
     Vec2f B = b.direction();
@@ -39,7 +27,7 @@ static float angleWeight(const Line& a, const Line& b)
     return std::fabs(cross) / (lenA * lenB);
 }
 
-std::optional<Vec2f> weightedAngleAverageSegmentIntersections(const std::vector<Line>& lines)
+std::optional<Vec2f> Slam::weightedAngleAverageSegmentIntersections(const std::vector<Line>& lines)
 {
     double totalWeight = 0.0;
     Vec2f weightedSum(0, 0);
@@ -70,14 +58,14 @@ std::optional<Vec2f> weightedAngleAverageSegmentIntersections(const std::vector<
     return Vec2f(weightedSum.x * inv, weightedSum.y * inv);
 }
 
-LidarPoint vec2fToLidarPoint(const Vec2f& point) {
+LidarPoint Slam::vec2fToLidarPoint(const Vec2f& point) {
     float distance = std::sqrt(point.x * point.x + point.y * point.y);
     float angle = std::atan2(point.y, point.x); // atan2 returns radians
 
     return {angle, distance};
 }
 
-void generateTestPoints(
+void Slam::generateTestPoints(
     vector<LidarPoint>& lidarPoints,
     const Vec2f& pos,
     const vector<Line>& lms, const float& angleNoiseStdDeg, const float& distanceNoiseStd, const int& rayCount)
@@ -139,14 +127,13 @@ void generateTestPoints(
     }
 }
 
-bool isPointDistanceUseable(const LidarPoint& lp, const float& minDistance, const float& maxDistance){
+bool Slam::isPointDistanceUseable(const LidarPoint& lp, const float& minDistance, const float& maxDistance){
     // Minimum and maximum distance check
     if(lp.distance <= minDistance || lp.distance >= maxDistance) return false;
     return true;
 }
-    
 
-bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Environment environment, float maxDeltaPosition, float maxDistanceDeviation = 0.25f) {
+bool Slam::isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, float maxDistance, Environment environment) {
     if(!isPointDistanceUseable(lp, minDistance, maxDistance)) return false;
     
     // Direction check
@@ -249,10 +236,10 @@ bool isPointUseable(LidarPoint& lp, Vec2f estimatedPosition, float minDistance, 
     return true;
 }
 
-int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan, float maxDeltaPosition, float maxDistanceDeviation) {
+int Slam::getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& environment, LidarScan& useableScan) {
     int useablePointCount = 0;
     for (LidarPoint& lp : scan.scan) {
-        if(isPointUseable(lp, estimatedPosition, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE, environment, maxDeltaPosition, maxDistanceDeviation)) {
+        if(isPointUseable(lp, estimatedPosition, minPointDistance, maxPointDistance, environment)) {
             useableScan.scan.push_back(lp);
             //printf("Usable Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
             useablePointCount++;
@@ -261,10 +248,10 @@ int getUsablePoints(LidarScan scan, Vec2f estimatedPosition, const Environment& 
     return useablePointCount;
 }
 
-int getDistanceUseablePoints(const LidarScan& scan, LidarScan& useableScan) {
+int Slam::getDistanceUseablePoints(const LidarScan& scan, LidarScan& useableScan) {
     int useablePointCount = 0;
     for (const LidarPoint& lp : scan.scan) {
-        if(isPointDistanceUseable(lp, MIN_POINT_DISTANCE, MAX_POINT_DISTANCE)) {
+        if(isPointDistanceUseable(lp, minPointDistance, maxPointDistance)) {
             useableScan.scan.push_back(lp);
             useablePointCount++;
         }
@@ -272,7 +259,7 @@ int getDistanceUseablePoints(const LidarScan& scan, LidarScan& useableScan) {
     return useablePointCount;
 }
 
-Line linearRegression(const vector<Vec2f>& points) {
+Line Slam::linearRegression(const vector<Vec2f>& points) {
     if (points.size() < 2)
         return Line();
 
@@ -310,7 +297,7 @@ Line linearRegression(const vector<Vec2f>& points) {
     return Line(p1, p2);
 }
 
-optional<float> compareLines(const Line& a, const Line& b) {
+optional<float> Slam::compareLines(const Line& a, const Line& b) {
     Vec2f dirA = a.direction();
     Vec2f dirB = b.direction();
     Vec2f dirBR = dirB * -1.0f;
@@ -349,7 +336,7 @@ optional<float> compareLines(const Line& a, const Line& b) {
     //printf("AngleDiff: %.2f\n", angleDiff);
 
     // Reject nearly orthogonal lines
-    if (fabs(angleDiff) >= MAX_LINE_DEVIATION) {
+    if (fabs(angleDiff) >= maxLineDeviation) {
         //printf("Line rejected because of angle: %.2f\n", angleDiff);
         //printf("Line a: S - X: %.2f Y %.2f E - X: %.2f Y %.2f Line Line b: S - X: %.2f Y %.2f E - X: %.2f Y %.2f\n", a.start.x, a.start.y, a.end.x, a.end.y, b.start.x, b.start.y, b.end.x, b.end.y);
         return std::nullopt;
@@ -358,7 +345,7 @@ optional<float> compareLines(const Line& a, const Line& b) {
     return angleDiff; 
 }
 
-optional<float> lidarEstimateHeading(const LidarScan& scan, const Environment& environment, Vec2f estimatedPosition) { // Position is only here for debugging and or visualisation
+optional<float> Slam::lidarEstimateHeading(const LidarScan& scan, const Environment& environment, Vec2f estimatedPosition) { // Position is only here for debugging and or visualisation
     float angleSum = 0.0f;
     int count = 0;
     for(int i = 0; i < environment.landmarks.size(); i++) {
@@ -371,7 +358,7 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Environment& e
             }
         }
         //printf("Lm: %d Point Count: %d\n", i, points.size());
-        if(points.size() >= MIN_POINTS_FOR_LINE) {
+        if(points.size() >= minPointsForLine) {
             Line line = linearRegression(points);
             Line absLine = Line(line.start+estimatedPosition, line.end+estimatedPosition);
             dpd.appendLine(absLine, GRAY, SLAM_DEBUG_LINE);
@@ -381,14 +368,14 @@ optional<float> lidarEstimateHeading(const LidarScan& scan, const Environment& e
                 count++;
                 dpd.appendLine(absLine, BLUE, SLAM_DEBUG_LINE);
             }
-            else printf("Angle has no value!\n");
+            //else printf("Angle has no value!\n");
         }
     }
     if(count == 0) return std::nullopt;
     return -angleSum / float(count); // - to convert from landmark-to-scan angle to robot heading error angle
 }
 
-optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Environment& environment, const Vec2f& estimatedPosition) {
+optional<Vec2f> Slam::lidarEstimatePosition(const LidarScan& scan, const Environment& environment, const Vec2f& estimatedPosition) {
     vector<Line> parallels;
     for (auto lp : scan.scan) {
         //printf("Lidar Point - Angle: %f, Distance: %f, LmIndex: %d\n", lp.angle, lp.distance, lp.lmIndex);
@@ -421,12 +408,50 @@ optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Environment& 
 }
 
 
-int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& inputScan, enum RUN_DIRECTION& runDirection)
+int Slam::getRunDirection(const Vec2f& position, const float& heading, const LidarScan& inputScan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection)
 {
     LidarScan scan;
     getDistanceUseablePoints(inputScan, scan);
     
     if (scan.scan.size() <= 0) return 0;
+
+    if (runType == RUN_TYPE_OPENING_RUN)
+    {
+        float distanceWallLeft = 0;
+        float distanceWallRight = 0;
+        int wallCountLeft = 0;
+        int wallCountRight = 0;
+
+        for (auto lp : scan.scan)
+        {
+            if (lp.angle < M_PI/2.0f + angleForOpeningRunDirectionDetermination && lp.angle > M_PI/2.0f - angleForOpeningRunDirectionDetermination)
+            {
+                distanceWallLeft += lp.distance;
+                wallCountLeft++;
+            }
+            else if (lp.angle < 3.0f*M_PI/2.0f + angleForOpeningRunDirectionDetermination && lp.angle > 3.0f*M_PI/2.0f - angleForOpeningRunDirectionDetermination)
+            {
+                distanceWallRight += lp.distance;
+                wallCountRight++;
+            }
+        }
+
+        if (wallCountLeft >= 5 && wallCountRight == 0) {runDirection = RUN_DIRECTION_CW; return 1;}
+        else if (wallCountRight >= 5 && wallCountLeft == 0) {runDirection = RUN_DIRECTION_CCW; return 1;}
+
+        if (wallCountLeft <= 5 || wallCountRight <= 5) return 0;
+        distanceWallLeft /= float(wallCountLeft);
+        distanceWallRight /= float(wallCountRight);
+
+        printf("Distance Left: %.2f Right: %.2f\n", distanceWallLeft, distanceWallRight);
+
+        if (distanceWallLeft + distanceWallRight < maxDistanceForOpeningRunDirection)
+        {
+            if (distanceWallLeft < distanceWallRight) runDirection = RUN_DIRECTION_CCW;
+            else runDirection = RUN_DIRECTION_CW;
+            return 1;
+        }
+    }
 
     float distanceLeft = 0;
     float distanceRight = 0;
@@ -448,11 +473,11 @@ int getRunDirection(const Vec2f& position, const float& heading, const LidarScan
         }
     }
 
-    if (countLeft <= MIN_POINTS_FOR_RUN_DIRECTION || countRight <= MIN_POINTS_FOR_RUN_DIRECTION) return 0;
+    if (countLeft <= minPointsForObstacleRunDirection || countRight <= minPointsForObstacleRunDirection) return 0;
     distanceLeft /= float(countLeft);
     distanceRight /= float(countRight);
 
-    if (fabs(distanceRight-distanceLeft) < MIN_DISTANCE_DIFFERENCE) return 0;
+    if (fabs(distanceRight-distanceLeft) < minDistanceDifferenceForObstacleRunDirection) return 0;
     if (distanceLeft > distanceRight) runDirection = RUN_DIRECTION_CCW;
     else runDirection = RUN_DIRECTION_CW;
     return 1;

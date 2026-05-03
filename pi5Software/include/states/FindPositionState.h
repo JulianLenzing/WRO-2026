@@ -5,10 +5,7 @@
 
 #include "State.h"
 #include "RobotSystem.h"
-#include "slam.h"
-#include "sensorUpdateFunctions.h"
 #include "LidarPoint.h"
-#include "../RobotSystem.h"
 
 class FindPositionState : public State{
     void enter(RobotSystem& robot) override
@@ -16,13 +13,15 @@ class FindPositionState : public State{
         robot.position = Vec2f(1.5f, 0.5f);
 
         // Determine run direction
+
         LidarScan lidarScan;
         do
         {
             getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
             printf("Determining run direction\n");
         }
-        while (!getRunDirection(robot.position, robot.heading, lidarScan, robot.runDirection));
+        while (!robot.initSlam.getRunDirection(robot.position, robot.heading, lidarScan, robot.runType, robot.runDirection));
+
         if (robot.runDirection == RUN_DIRECTION_CCW) robot.heading = 0;
         else robot.heading = M_PI;
         robot.pathfinder.setRunDirection(robot.runDirection);
@@ -48,11 +47,11 @@ class FindPositionState : public State{
             float beginningHeading = robot.heading;
 
             LidarScan useableScan;
-            getUsablePoints(lidarScan, robot.position, robot.environment, useableScan, 0.2f, 0.7f);
+            robot.initSlam.getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
 
             std::optional<float> lidarHeading;
             lidarHeading.reset();
-            std::optional<float> maybeNewEstimatedHeading = lidarEstimateHeading(useableScan, robot.environment, robot.position);
+            std::optional<float> maybeNewEstimatedHeading = robot.initSlam.lidarEstimateHeading(useableScan, robot.environment, robot.position);
              if(maybeNewEstimatedHeading.has_value()) {
                 float error = maybeNewEstimatedHeading.value();
                 lidarHeading = robot.heading + error;
@@ -63,12 +62,12 @@ class FindPositionState : public State{
                 // The useable points are reassigned to ensure greater accuracy
                 lidarScan.rotate(error);
                 useableScan.scan.clear();
-                getUsablePoints(lidarScan, robot.position, robot.environment, useableScan, 0.2f, 0.7f);
+                robot.initSlam.getUsablePoints(lidarScan, robot.position, robot.environment, useableScan);
              }
             for(const auto& lp : lidarScan.scan) {dpd.appendPoint(lp.point() + robot.position, GRAY, UNUSEABLE_LIDAR_POINT_POINT);}
             for(const auto& lp : useableScan.scan) {dpd.appendPoint(lp.point() + robot.position, BLUE, USEABLE_LIDAR_POINT_POINT);}
 
-            auto maybeNewEstimatedPosition = lidarEstimatePosition(useableScan, robot.environment, robot.position);
+            auto maybeNewEstimatedPosition = robot.initSlam.lidarEstimatePosition(useableScan, robot.environment, robot.position);
 
             if(maybeNewEstimatedPosition.has_value()) {
                 robot.position = maybeNewEstimatedPosition.value();

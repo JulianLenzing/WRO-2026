@@ -5,8 +5,6 @@
 #include "State.h"
 #include "RobotSystem.h"
 #include "../RobotSystem.h"
-#include "slam.h"
-#include "../slam.h"
 
 class StartState : public State{
 	void enter(RobotSystem& robot) override 
