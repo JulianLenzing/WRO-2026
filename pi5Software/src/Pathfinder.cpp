@@ -27,6 +27,7 @@ void Pathfinder::setStartingPosition(Vec2f position)
     if (position.x <= 1.5f)
     {
         startedLeft = true;
+
     }
     else startedLeft = false;
 }
@@ -202,7 +203,7 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             }
             else
             {
-                if (runDirection == RUN_DIRECTION_CW) finalSide.copyPath(openingRunFinalRight);
+                if (runDirection == RUN_DIRECTION_CCW) finalSide.copyPath(openingRunFinalRight);
                 else finalSide.copyPath(openingRunFinalLeft);
             }
             
@@ -329,7 +330,7 @@ void Pathfinder::initPaths()
         openingRunFinalLeft.waypoints.push_back(Waypoint(Vec2f(1.0f, yLightOuter), 0.0f, false));
         openingRunFinalLeft.waypoints.push_back(Waypoint(Vec2f(1.25f, yLightOuter), 0.0f, true));
 
-        // Opening run final
+        // Opening run final right
         openingRunFinalRight.name = "Opening run final right";
         openingRunFinalRight.waypoints.clear();
         openingRunFinalRight.waypoints.push_back(Waypoint(Vec2f(1.0f, yLightOuter), 0.0f, false));

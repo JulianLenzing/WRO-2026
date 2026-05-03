@@ -436,8 +436,8 @@ int Slam::getRunDirection(const Vec2f& position, const float& heading, const Lid
             }
         }
 
-        if (wallCountLeft >= 5 && wallCountRight == 0) {runDirection = RUN_DIRECTION_CW; return 1;}
-        else if (wallCountRight >= 5 && wallCountLeft == 0) {runDirection = RUN_DIRECTION_CCW; return 1;}
+        if (wallCountLeft >= 5 && wallCountRight == 0) {runDirection = RUN_DIRECTION_CW; printf("Determined run direction by point count\n"); return 1;}
+        else if (wallCountRight >= 5 && wallCountLeft == 0) {runDirection = RUN_DIRECTION_CCW; printf("Determined run direction by point count\n"); return 1;}
 
         if (wallCountLeft <= 5 || wallCountRight <= 5) return 0;
         distanceWallLeft /= float(wallCountLeft);
@@ -445,10 +445,11 @@ int Slam::getRunDirection(const Vec2f& position, const float& heading, const Lid
 
         printf("Distance Left: %.2f Right: %.2f\n", distanceWallLeft, distanceWallRight);
 
-        if (distanceWallLeft + distanceWallRight < maxDistanceForOpeningRunDirection)
+        if (fabs(distanceWallLeft - distanceWallRight) < minWallDistanceDifferenceForOpeningRunDirection)
         {
             if (distanceWallLeft < distanceWallRight) runDirection = RUN_DIRECTION_CCW;
             else runDirection = RUN_DIRECTION_CW;
+            printf("Determined run direction by wall distance\n");
             return 1;
         }
     }
@@ -480,5 +481,6 @@ int Slam::getRunDirection(const Vec2f& position, const float& heading, const Lid
     if (fabs(distanceRight-distanceLeft) < minDistanceDifferenceForObstacleRunDirection) return 0;
     if (distanceLeft > distanceRight) runDirection = RUN_DIRECTION_CCW;
     else runDirection = RUN_DIRECTION_CW;
+    printf("Determined run direction by average point distance\n");
     return 1;
 }

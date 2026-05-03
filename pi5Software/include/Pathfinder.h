@@ -105,7 +105,7 @@ public:
             Vec2f v2 = d * projection;
             Vec2f v3 = p - v2 * 2;
             wp.point = v3;
-            
+
             // Reflect heading across perpendicular to d (matches point mirroring)
             Vec2f hv(cosf(wp.heading), sinf(wp.heading));
 
@@ -144,6 +144,8 @@ public:
     size_t getRound() {return round;}
 
     bool shouldStop(){return stop;}
+    
+    bool getStartedLeft() {return startedLeft;}
 
 private:
     std::vector<Side> sides;

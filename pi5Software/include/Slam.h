@@ -47,7 +47,7 @@ public:
     float minDistanceDifferenceForObstacleRunDirection = 0.05f;
     int minPointsForObstacleRunDirection = 100;
 
-    float maxDistanceForOpeningRunDirection = 0.9f;
+    float minWallDistanceDifferenceForOpeningRunDirection = 0.15f;
     float angleForOpeningRunDirectionDetermination = 5.0f/180.0f*M_PI;
 
 private:

@@ -21,6 +21,9 @@ class FindPositionState : public State{
             printf("Determining run direction\n");
         }
         while (!robot.initSlam.getRunDirection(robot.position, robot.heading, lidarScan, robot.runType, robot.runDirection));
+        printf("Run direction: ");
+        if(robot.runDirection == RUN_DIRECTION_CCW) printf("CCW\n");
+        else printf("CW\n");
 
         if (robot.runDirection == RUN_DIRECTION_CCW) robot.heading = 0;
         else robot.heading = M_PI;

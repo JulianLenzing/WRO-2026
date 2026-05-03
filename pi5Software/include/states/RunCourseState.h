@@ -97,6 +97,9 @@ public:
             robot.displayUI.throttle = throttle;
             robot.displayUI.currentWaypoint = robot.guidanceData.lookAtCurrentWaypoint().point;
             robot.displayUI.round = robot.pathfinder.getRound();
+            robot.displayUI.startedLeft = robot.pathfinder.getStartedLeft();
+            if(robot.runDirection == RUN_DIRECTION_CCW) robot.displayUI.runDirection = true;
+            else robot.displayUI.runDirection = false;
             robot.displayUI.update();
 
             uITimer.reset();

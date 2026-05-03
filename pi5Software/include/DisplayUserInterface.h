@@ -1,5 +1,4 @@
-#ifndef LINE_QUALITY_USERINTERFACE_H
-#define LINE_QUALITY_USERINTERFACE_H
+#pragma once
 
 #include <stdio.h>
 #include <iostream>
@@ -37,6 +36,9 @@ class DisplayUserInterface {
     float throttle = 0.0f;
     Vec2f currentWaypoint = Vec2f(-1, -1);
     size_t round = 0;
+    bool runDirection = false;
+    bool startedLeft = false;
+    
     // Status of the sensors
     bool encoderStatus = false;
     bool gyroStatus = false;
@@ -126,10 +128,15 @@ class DisplayUserInterface {
             ImGui::Text("X: %.3f Y: %.3f m", position.x, position.y);
             ImGui::Text("Heading: %3.2f degrees", heading / M_PI * 180);
             ImGui::Text("Current round: %d", int(round));
+            
             ImGui::SeparatorText("Guidance");
             ImGui::Text("Current waypoint - X: %.2f Y: %.2f m", currentWaypoint.x, currentWaypoint.y);
             ImGui::Text("Steering angle: %3.2f degrees", steeringAngle / M_PI * 180);
             ImGui::Text("Throttle: %3.2f", throttle);
+            if(runDirection) ImGui::Text("Run direction: CCW");
+            else ImGui::Text("Run direction: CW");
+            if(startedLeft) ImGui::Text("Starting section: Left");
+            else ImGui::Text("Starting section: Right");
 
             ImGui::SeparatorText("Status");
             ImGui::TextColored(boolToColor(encoderStatus), "Encoder status");
@@ -199,4 +206,3 @@ class DisplayUserInterface {
     }
 };
 
-#endif //LINE_QUALITY_USERINTERFACE_H
