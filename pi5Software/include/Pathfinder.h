@@ -159,20 +159,14 @@ private:
     const RUN_TYPE runType;
     bool startedLeft;
 
-    Path getPathFromObstacle(const Obstacle& obs);
-
-    bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
-    {
-        if (p.x >= lowerLeft.x && p.x <= upperRight.x)
-        {
-            if (p.y >= lowerLeft.y && p.y <= upperRight.y) return true;
-        }
-        return false;
-    }
-
     // Obstacle run
     Path initial;
-    Path final;
+
+    Path finalOuterLeft;
+    Path finalOuterRight;
+    Path finalInnerLeft;
+    Path finalInnerRight;
+
     Path fullInner;
     Path lightInner;
     Path lightOuter;
@@ -183,6 +177,19 @@ private:
     Path openingRunFinalLeft;
     Path openingRunFinalRight;
     Path openingRunPath;
+
+    Path getPathFromObstacle(const Obstacle& obs);
+
+    Path getFinalPathFromObstacle(const Obstacle& obs);
+
+    bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
+    {
+        if (p.x >= lowerLeft.x && p.x <= upperRight.x)
+        {
+            if (p.y >= lowerLeft.y && p.y <= upperRight.y) return true;
+        }
+        return false;
+    }
 
     void initPaths();
 
