@@ -25,6 +25,7 @@
 /* Guidance parameters */
 #define WAYPOINT_THRESHOLD 0.05f
 #define PASSED_WAYPOINT_THRESHOLD 0.15f
+#define MAX_CLOSING_ANGLE (M_PI/2.0f)
 
 using namespace std;
 
@@ -72,8 +73,8 @@ void guidanceMain(GuidanceData& guidanceData)
                 Vec2f relativePosition = position - closestPointOnLine;
                 float lineDistance = relativePosition.length();
 
-                float direction = currentWaypoint.value().heading; 
-                float closingAngle = clamp(lineDistance, 0.0f, 1.0f) * (M_PI/2.0f);
+                float direction = currentWaypoint.value().heading;
+                float closingAngle = powf(clamp(lineDistance, 0.0f, currentWaypoint.value().closingDistance) / currentWaypoint.value().closingDistance, 2.0f) * (M_PI/2.0f);
 
                 if (relativePosition.dot(waypointLine.normal()) > 0.0f) closingAngle = -closingAngle;
                 if (currentWaypoint.value().reverse) closingAngle = -closingAngle;
