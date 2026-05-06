@@ -13,7 +13,7 @@
 #include "Run_Type.h"
 #include "Line.h"
 
-#define ROUNDS_TO_DRIVE 1
+#define ROUNDS_TO_DRIVE 3
 #define WAYPOINT_INTERPOLATION_COUNT 15
 #define MIN_TURN_RADIUS 0.2f
 
