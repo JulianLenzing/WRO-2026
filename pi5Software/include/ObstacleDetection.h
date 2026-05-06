@@ -103,7 +103,7 @@ public:
         // ========================
         cv::Mat greenMask;
         #ifndef SIMULATION
-        cv::Scalar greenLower(40, 100, 60);
+        cv::Scalar greenLower(40, 80, 60);
         cv::Scalar greenUpper(65, 255, 255);
         #endif
         #ifdef SIMULATION

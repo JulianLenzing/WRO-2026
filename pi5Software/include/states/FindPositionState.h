@@ -13,6 +13,8 @@ class FindPositionState : public State{
         robot.position = Vec2f(1.5f, 0.5f);
 
         // Determine run direction
+        robot.initSlam.minPointDistance = 0.05f;
+		robot.initSlam.maxDistanceDeviation = 0.7f;
 
         LidarScan lidarScan;
         do
@@ -28,6 +30,9 @@ class FindPositionState : public State{
         if (robot.runDirection == RUN_DIRECTION_CCW) robot.heading = 0;
         else robot.heading = M_PI;
         robot.pathfinder.setRunDirection(robot.runDirection);
+        
+        robot.initSlam.minPointDistance = robot.slam.minPointDistance;
+		robot.initSlam.maxDistanceDeviation = 0.7f;
     }
 
     bool update(RobotSystem& robot) override

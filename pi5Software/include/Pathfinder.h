@@ -13,7 +13,7 @@
 #include "Run_Type.h"
 #include "Line.h"
 
-#define ROUNDS_TO_DRIVE 3
+#define ROUNDS_TO_DRIVE 1
 #define WAYPOINT_INTERPOLATION_COUNT 15
 #define MIN_TURN_RADIUS 0.2f
 
@@ -129,7 +129,7 @@ public:
 class Pathfinder
 {
 public:
-    Pathfinder(const RUN_TYPE& pRunType);
+    Pathfinder(const RUN_TYPE& pRunType, const bool& pParkingObstacle);
 
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData);
     
@@ -156,11 +156,14 @@ private:
     bool stop;
     enum RUN_DIRECTION runDirection;
     enum PATHFINDER_STATE pathfinderState;
-    const RUN_TYPE runType;
     bool startedLeft;
+    const RUN_TYPE runType;
+    const bool parkingObstacle;
 
     // Obstacle run
     Path initial;
+    Path initialOuter;
+    Path initialInner;
 
     Path finalOuterLeft;
     Path finalOuterRight;
@@ -172,15 +175,24 @@ private:
     Path lightOuter;
     Path fullOuter;
 
+    // Parking obstacle
+    Path parkingInner;
+    Path parkingOuter;
+
+    Path parkingFinalCCW;
+    Path parkingFinalCW;
+
     // Opening run
     Path openingRunInitial;
     Path openingRunFinalLeft;
     Path openingRunFinalRight;
     Path openingRunPath;
 
-    Path getPathFromObstacle(const Obstacle& obs);
+    bool getInitialPathFromObstacle(Path& path, const Obstacle& obs);
 
     Path getFinalPathFromObstacle(const Obstacle& obs);
+
+    Path getPathFromObstacle(const Obstacle& obs, int sideIndex = 1); // 1 as default for backward compatibility
 
     bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
     {

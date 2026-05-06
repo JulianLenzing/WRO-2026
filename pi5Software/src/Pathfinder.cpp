@@ -1,9 +1,12 @@
 #include "Pathfinder.h"
+#include "../include/Pathfinder.h"
+
 #include "Run_Type.h"
 
-Pathfinder::Pathfinder(const RUN_TYPE& pRunType) 
+Pathfinder::Pathfinder(const RUN_TYPE& pRunType, const bool& pParkingObstacle)
     : 
-    runType(pRunType), 
+    runType(pRunType),
+    parkingObstacle(pParkingObstacle),
     currentSideIndex(0), 
     runDirection(RUN_DIRECTION_CCW), 
     round(1), 
@@ -79,7 +82,13 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
         switch (pathfinderState)
         {
         case PATHFINDER_STATE_INITIAL:
-            initialSide.copyPath(initial);
+        {
+            Obstacle obstacle;
+            if(!getSideObstacle(obstacles, 0, obstacle)) return;
+
+            Path chosenPath;
+            if(!getInitialPathFromObstacle(chosenPath, obstacle)) return;
+            initialSide.copyPath(chosenPath);
             if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath();
 
             // Append the waypoints of the chosen path and correct for run direction
@@ -94,61 +103,62 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             currentSideIndex = (currentSideIndex + 4) % 4;
             pathfinderState = PATHFINDER_STATE_SIDES;
             //printf("Init Round: %d Index: %d\n", round, currentSideIndex);
+        }
             break;
 
         case PATHFINDER_STATE_SIDES:
+        {
+            //printf("Current Index: %d\n", currentSideIndex);
+            if (!sides[currentSideIndex].hasPath)
             {
-                //printf("Current Index: %d\n", currentSideIndex);
-                if (!sides[currentSideIndex].hasPath)
-                {
-                    // If the current side does not have a path one must be determined
-                    Obstacle obstacle;
-                    if(!getSideObstacle(obstacles, currentSideIndex, obstacle)) return;
-                    if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
+                // If the current side does not have a path one must be determined
+                Obstacle obstacle;
+                if(!getSideObstacle(obstacles, currentSideIndex, obstacle)) return;
+                if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
 
-                    sides[currentSideIndex].copyPath(getPathFromObstacle(obstacle));
-                    if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath();
-                }
-
-                // Append the waypoints of the chosen path and correct for run direction
-                for (const Waypoint& wp : sides[currentSideIndex].path.waypoints)
-                {
-                    guidanceData.appendWaypoint(wp);
-                }
-
-                // Index to next side
-                if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-                else currentSideIndex--;
-                currentSideIndex = (currentSideIndex + 4) % 4;
-                if (currentSideIndex == 0) round++;
-
-                //printf("Round: %d Index: %d\n", round, currentSideIndex);
-
-                if (round == ROUNDS_TO_DRIVE + 1)
-                {
-                    pathfinderState = PATHFINDER_STATE_FINAL;
-                    round = ROUNDS_TO_DRIVE;
-                }
+                sides[currentSideIndex].copyPath(getPathFromObstacle(obstacle, currentSideIndex));
+                if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath();
             }
+
+            // Append the waypoints of the chosen path and correct for run direction
+            for (const Waypoint& wp : sides[currentSideIndex].path.waypoints)
+            {
+                guidanceData.appendWaypoint(wp);
+            }
+
+            // Index to next side
+            if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
+            else currentSideIndex--;
+            currentSideIndex = (currentSideIndex + 4) % 4;
+            if (currentSideIndex == 0) round++;
+
+            //printf("Round: %d Index: %d\n", round, currentSideIndex);
+
+            if (round == ROUNDS_TO_DRIVE + 1)
+            {
+                pathfinderState = PATHFINDER_STATE_FINAL;
+                round = ROUNDS_TO_DRIVE;
+            }
+        }
             break;
 
         case PATHFINDER_STATE_FINAL:
+        {
+            Obstacle obstacle;
+            if(!getSideObstacle(obstacles, 0, obstacle)) return;
+            if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
+
+            finalSide.copyPath(getFinalPathFromObstacle(obstacle));
+            if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath();
+
+            // Append the waypoints of the chosen path and correct for run direction
+            for (const Waypoint& wp : finalSide.path.waypoints)
             {
-                Obstacle obstacle;
-                if(!getSideObstacle(obstacles, 0, obstacle)) return;
-                if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
-
-                finalSide.copyPath(getFinalPathFromObstacle(obstacle));
-                if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath();
-
-                // Append the waypoints of the chosen path and correct for run direction
-                for (const Waypoint& wp : finalSide.path.waypoints)
-                {
-                    guidanceData.appendWaypoint(wp);
-                }
-
-                pathfinderState = PATHFINDER_STATE_STOP;
+                guidanceData.appendWaypoint(wp);
             }
+
+            pathfinderState = PATHFINDER_STATE_STOP;
+        }
             break;
 
         case PATHFINDER_STATE_STOP:
@@ -231,33 +241,37 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
     }
 }
 
-Path Pathfinder::getPathFromObstacle(const Obstacle& obs)
+bool Pathfinder::getInitialPathFromObstacle(Path& path, const Obstacle& obs)
 {
-    if(runDirection == RUN_DIRECTION_CCW)
+    if((startedLeft && runDirection == RUN_DIRECTION_CW) || (!startedLeft && runDirection == RUN_DIRECTION_CCW)) {path = initial; return true;}
+
+    if(runDirection == RUN_DIRECTION_CCW) 
     {
-        if (obs.positionNumber <= 3)
-        {
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightOuter;
-            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullInner;
+        if (obs.positionNumber == 3 || obs.positionNumber == 6) {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialOuter; return true;}
+            else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialInner; return true;}
         }
-        if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullOuter;
-        if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightInner;
+        else {path = initial; return true;}
     }
     else
     {
-        if (obs.positionNumber <= 3)
-        {
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullInner;
-            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightOuter;
+        if (obs.positionNumber == 1 || obs.positionNumber == 4) {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialInner; return true;}
+            else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialOuter; return true;}
         }
-        if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightInner;
-        if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullOuter;
+        else {path = initial; return true;}
     }
-    return fullOuter; // Suppress compiler warning
+    return false; 
 }
 
 Path Pathfinder::getFinalPathFromObstacle(const Obstacle& obs)
 {
+    if (parkingObstacle)
+    {
+        if (runDirection == RUN_DIRECTION_CCW) return parkingFinalCCW;
+        else return parkingFinalCW;
+    }
+
     if (runDirection == RUN_DIRECTION_CCW)
     {
         if (obs.getColor() == OBSTACLE_COLOUR_RED)
@@ -287,6 +301,45 @@ Path Pathfinder::getFinalPathFromObstacle(const Obstacle& obs)
     return finalOuterLeft; // Suppress compiler warning
 }
 
+Path Pathfinder::getPathFromObstacle(const Obstacle& obs, int sideIndex)
+{
+    if (parkingObstacle && sideIndex == 0)
+    {
+        if (runDirection == RUN_DIRECTION_CCW)
+        {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return parkingOuter;
+            else return parkingInner;
+        }
+        else
+        {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return parkingInner;
+            else return parkingOuter;
+        }
+    }
+
+    if(runDirection == RUN_DIRECTION_CCW)
+    {
+        if (obs.positionNumber <= 3)
+        {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightOuter;
+            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullInner;
+        }
+        if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullOuter;
+        if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightInner;
+    }
+    else
+    {
+        if (obs.positionNumber <= 3)
+        {
+            if (obs.getColor() == OBSTACLE_COLOUR_RED) return fullInner;
+            if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return lightOuter;
+        }
+        if (obs.getColor() == OBSTACLE_COLOUR_RED) return lightInner;
+        if (obs.getColor() == OBSTACLE_COLOUR_GREEN) return fullOuter;
+    }
+    return fullOuter; // Suppress compiler warning
+}
+
 void Pathfinder::initPaths()
     {
         // Base Values
@@ -305,7 +358,22 @@ void Pathfinder::initPaths()
         initial.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
         initial.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
         initial.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, true, true));
-        //turnWrapper(initial.waypoints);
+        
+        // Initial outer
+        initialOuter.name = "Initial outer";
+        initialOuter.waypoints.clear();
+        initialOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, false));
+        initialOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
+        initialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
+        initialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
+
+        // Initial inner
+        initialInner.name = "Initial inner";
+        initialInner.waypoints.clear();
+        initialInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
+        initialInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
+        initialInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
+        initialInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
 
         // Final outer left
         finalOuterLeft.name = "Final outer left";
@@ -340,7 +408,6 @@ void Pathfinder::initPaths()
         fullInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
         fullInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
         fullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
-        //turnWrapper(fullInner.waypoints);
 
         // Light inner
         lightInner.name = "Light inner";
@@ -373,6 +440,44 @@ void Pathfinder::initPaths()
         fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
         fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
 
+        // Parking inner
+        parkingInner.name = "Parking inner";
+        parkingInner.waypoints.clear();
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false));
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullInner), 0.0f, false));
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
+
+        // Parking outer
+        parkingOuter.name = "Parking outer";
+        parkingOuter.waypoints.clear();
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, 0.4f), 0.0f, false));
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, 0.4f), 0.0f, false));
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, 0.4f), 0.0f, true));
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.2f, 0.3f), 0.0f, false));
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), toRad(90), true));
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), toRad(90), true, true));
+
+        float length = 0.16f;
+        float halfParkingZoneLength = length * 1.5f / 2.0f;
+        // Parking final ccw
+        parkingFinalCCW.name = "Parking final CCW";
+        parkingFinalCCW.waypoints.clear();
+        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false));
+        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.5f, yFullInner), 0.0f, true));
+        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.99f - halfParkingZoneLength, 0.1f), toRad(-90), true));
+
+        // Parking final cw
+        // To not change the existing waypoint append scheme this must be implemented as if the parking zone was on the left
+        parkingFinalCW.name = "Parking final CW";
+        parkingFinalCW.waypoints.clear();
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, true));
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength - 0.05f, 0.35f), toRad(-90), true));
+        //parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength + 0.07f, 0.6f), toRad(135), true, true));
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength - 0.07f, 0.8f), toRad(-90), true, true));
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength, 0.1f), toRad(-90), true, false , 0.1f));
 
         // Opening run initial
         openingRunInitial.name = "Opening run initial";

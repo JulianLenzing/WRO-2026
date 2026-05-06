@@ -59,6 +59,11 @@ if(OPENING_RUN)
 	target_compile_definitions(main PRIVATE OPENING_RUN)
 endif()
 
+option(PARKING_OBSTACLE "Enable support for parking in the obstacle; Ignored if OPENING_RUN is set to ON" ON)
+if(PARKING_OBSTACLE AND NOT OPENING_RUN)
+	target_compile_definitions(main PRIVATE PARKING_OBSTACLE)
+endif()
+
 option(SIMULATION "Enable support for the godot simulation" OFF)
 if(SIMULATION)
 	target_compile_definitions(main PRIVATE SIMULATION)

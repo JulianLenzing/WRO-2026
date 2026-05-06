@@ -44,6 +44,12 @@ class RobotSystem{
 	static constexpr enum RUN_TYPE runType = RUN_TYPE_OPENING_RUN;
 #endif
 
+#ifndef PARKING_OBSTACLE
+	static constexpr bool parkingObstacle = false;
+#else
+	static constexpr bool parkingObstacle = true;
+#endif
+
 	// Pose
 	float heading;
 	Vec2f position;
@@ -75,9 +81,6 @@ class RobotSystem{
 		position(0.0f, 0.0f),
 		runDirection(RUN_DIRECTION_CCW),
 		obstacleDetection(),
-		pathfinder(runType)
-	{
-		initSlam.minPointDistance = 0.05f;
-		initSlam.maxDistanceDeviation = 0.7f;
-	}
+		pathfinder(runType, parkingObstacle)
+	{}
 };

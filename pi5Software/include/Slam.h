@@ -36,7 +36,7 @@ public:
 
     int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection);
 
-    float minPointDistance = 0.18f;
+    float minPointDistance = 0.10f;
     float maxPointDistance = 3.65f;
     float maxDeltaPosition = 0.2f;
     float maxDistanceDeviation = 0.25f;
