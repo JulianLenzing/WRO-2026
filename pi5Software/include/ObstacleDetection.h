@@ -103,8 +103,8 @@ public:
         // ========================
         cv::Mat greenMask;
         #ifndef SIMULATION
-        cv::Scalar greenLower(40, 80, 60);
-        cv::Scalar greenUpper(65, 255, 255);
+        cv::Scalar greenLower(40, 40, 50);
+        cv::Scalar greenUpper(75, 255, 255);
         #endif
         #ifdef SIMULATION
         cv::Scalar greenLower(40, 50, 50);
@@ -153,7 +153,7 @@ public:
 
         for (const auto& cnt : greenContours) {
             double area = cv::contourArea(cnt);
-            if (area > 500 && area > maxGreenArea) {  // ignore small noise
+            if (area > maxGreenArea) {  // ignore small noise
                 maxGreenArea = area;
                 bestGreenRect = cv::boundingRect(cnt);
             }
@@ -164,7 +164,7 @@ public:
 
         for (const auto& cnt : redContours) {
             double area = cv::contourArea(cnt);
-            if (area > 500 && area > maxRedArea) {
+            if (area > maxRedArea) {
                 maxRedArea = area;
                 bestRedRect = cv::boundingRect(cnt);
             }
@@ -180,6 +180,11 @@ public:
         if (maxRedArea > 0) {
             cv::rectangle(display, bestRedRect, cv::Scalar(312, 100, 100), 2);
         }
+        
+        cv::imshow("Camera", display);
+        cv::imshow("Green Mask", greenMask);
+        cv::imshow("Red Mask", redMask);
+        cv::waitKey(1);
 
         // ========================
         // PRINT WHICH IS CLOSER
@@ -193,24 +198,12 @@ public:
                 obstacleColor = OBSTACLE_COLOUR_RED;
             } else {
                 std::cout << "Both are at similar distance\n";
-                cv::imshow("Camera", display);
-                cv::waitKey(1);
                 return 0;
             }
         } else {
             std::cout << "No objects detected\n";
-            cv::imshow("Camera", display);
-            cv::waitKey(1);
             return 0;
         }
-
-        // ========================
-        // SHOW OUTPUT
-        // ========================
-        cv::imshow("Camera", display);
-        cv::waitKey(1);
-        //cv::imshow("Green Mask", greenMask);
-        //cv::imshow("Red Mask", redMask);
         return 1;
     }
 
