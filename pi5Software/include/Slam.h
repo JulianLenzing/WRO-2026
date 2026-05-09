@@ -36,7 +36,7 @@ public:
 
     int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection);
 
-    float minPointDistance = 0.10f;
+    float minPointDistance = 0.15f;
     float maxPointDistance = 3.65f;
     float maxDeltaPosition = 0.2f;
     float maxDistanceDeviation = 0.25f;
@@ -44,8 +44,9 @@ public:
     int minPointsForLine = 35;
     float maxLineDeviation = 0.349f; // Atmost pi/2
 
-    float minDistanceDifferenceForObstacleRunDirection = 0.05f;
-    int minPointsForObstacleRunDirection = 100;
+    float minimumPerpendicularDistanceForObstacleRunDirection = 0.6f;
+    int minPointDifferenceForObstacleRunDirection = 5;
+    int minPointsForObstacleRunDirection = 10;
 
     float minWallDistanceDifferenceForOpeningRunDirection = 0.15f;
     float angleForOpeningRunDirectionDetermination = 5.0f/180.0f*M_PI;

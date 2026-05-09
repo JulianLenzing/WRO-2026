@@ -445,7 +445,7 @@ int Slam::getRunDirection(const Vec2f& position, const float& heading, const Lid
 
         printf("Distance Left: %.2f Right: %.2f\n", distanceWallLeft, distanceWallRight);
 
-        if (fabs(distanceWallLeft - distanceWallRight) < minWallDistanceDifferenceForOpeningRunDirection)
+        if (fabs(distanceWallLeft - distanceWallRight) > minWallDistanceDifferenceForOpeningRunDirection)
         {
             if (distanceWallLeft < distanceWallRight) runDirection = RUN_DIRECTION_CCW;
             else runDirection = RUN_DIRECTION_CW;
@@ -454,32 +454,28 @@ int Slam::getRunDirection(const Vec2f& position, const float& heading, const Lid
         }
     }
 
-    float distanceLeft = 0;
-    float distanceRight = 0;
-
     int countLeft = 0;
     int countRight = 0;
-
     for (auto lp : scan.scan)
     {
-        if (lp.angle < M_PI && lp.angle > 0)
+        float perpDistance = fabs(sinf(lp.angle)) * lp.distance; 
+        if(perpDistance > minimumPerpendicularDistanceForObstacleRunDirection) 
         {
-            distanceLeft += lp.distance;
-            countLeft++;
-        }
-        else
-        {
-            distanceRight += lp.distance;
-            countRight++;
+            if (lp.angle < M_PI && lp.angle > 0)
+            {
+                countLeft++;
+            }
+            else
+            {
+                countRight++;
+            }
         }
     }
 
-    if (countLeft <= minPointsForObstacleRunDirection || countRight <= minPointsForObstacleRunDirection) return 0;
-    distanceLeft /= float(countLeft);
-    distanceRight /= float(countRight);
+    if (countLeft <= minPointsForObstacleRunDirection && countRight <= minPointsForObstacleRunDirection) return 0;
+    if(abs(countLeft - countRight) < minPointDifferenceForObstacleRunDirection) return 0;
 
-    if (fabs(distanceRight-distanceLeft) < minDistanceDifferenceForObstacleRunDirection) return 0;
-    if (distanceLeft > distanceRight) runDirection = RUN_DIRECTION_CCW;
+    if (countLeft > countRight) runDirection = RUN_DIRECTION_CCW;
     else runDirection = RUN_DIRECTION_CW;
     printf("Determined run direction by average point distance\n");
     return 1;

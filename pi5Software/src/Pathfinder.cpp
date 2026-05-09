@@ -3,8 +3,9 @@
 
 #include "Run_Type.h"
 
-Pathfinder::Pathfinder(const RUN_TYPE& pRunType, const bool& pParkingObstacle)
+Pathfinder::Pathfinder(const float& pRobotLength, const RUN_TYPE& pRunType, const bool& pParkingObstacle)
     : 
+    robotLength(pRobotLength),
     runType(pRunType),
     parkingObstacle(pParkingObstacle),
     currentSideIndex(0), 
@@ -245,21 +246,44 @@ bool Pathfinder::getInitialPathFromObstacle(Path& path, const Obstacle& obs)
 {
     if((startedLeft && runDirection == RUN_DIRECTION_CW) || (!startedLeft && runDirection == RUN_DIRECTION_CCW)) {path = initial; return true;}
 
-    if(runDirection == RUN_DIRECTION_CCW) 
+    if(parkingObstacle)
     {
-        if (obs.positionNumber == 3 || obs.positionNumber == 6) {
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialOuter; return true;}
-            else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialInner; return true;}
+        if(runDirection == RUN_DIRECTION_CCW) 
+        {
+            if (obs.positionNumber == 3 || obs.positionNumber == 6) {
+                if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = parkingInitialOuter; return true;}
+                else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialInner; return true;}
+            }
+            else {path = initial; return true;}
         }
-        else {path = initial; return true;}
+        else
+        {
+            if (obs.positionNumber == 1 || obs.positionNumber == 4) {
+                if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialInner; return true;}
+                else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = parkingInitialOuter; return true;}
+            }
+            else {path = initial; return true;}
+        }
+        return false; 
     }
     else
     {
-        if (obs.positionNumber == 1 || obs.positionNumber == 4) {
-            if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialInner; return true;}
-            else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialOuter; return true;}
+        if(runDirection == RUN_DIRECTION_CCW) 
+        {
+            if (obs.positionNumber == 3 || obs.positionNumber == 6) {
+                if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialOuter; return true;}
+                else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialInner; return true;}
+            }
+            else {path = initial; return true;}
         }
-        else {path = initial; return true;}
+        else
+        {
+            if (obs.positionNumber == 1 || obs.positionNumber == 4) {
+                if (obs.getColor() == OBSTACLE_COLOUR_RED) {path = initialInner; return true;}
+                else if(obs.getColor() == OBSTACLE_COLOUR_GREEN) {path = initialOuter; return true;}
+            }
+            else {path = initial; return true;}
+        }
     }
     return false; 
 }
@@ -373,7 +397,7 @@ void Pathfinder::initPaths()
         initialInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
         initialInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
         initialInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
-        initialInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
+        initialInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true, 0.35f));
 
         // Final outer left
         finalOuterLeft.name = "Final outer left";
@@ -440,6 +464,14 @@ void Pathfinder::initPaths()
         fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
         fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
 
+        // Parking initial outer
+        parkingInitialOuter.name = "Parking initial outer";
+        parkingInitialOuter.waypoints.clear();
+        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, 0.4f), 0.0f, false));
+        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
+        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
+        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
+
         // Parking inner
         parkingInner.name = "Parking inner";
         parkingInner.waypoints.clear();
@@ -460,25 +492,21 @@ void Pathfinder::initPaths()
         parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), toRad(90), true));
         parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), toRad(90), true, true));
 
-        float length = 0.16f;
-        float halfParkingZoneLength = length * 1.5f / 2.0f;
+        float halfParkingZoneLength = robotLength * 1.5f / 2.0f;
         // Parking final ccw
         parkingFinalCCW.name = "Parking final CCW";
         parkingFinalCCW.waypoints.clear();
         parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false));
         parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.5f, yFullInner), 0.0f, true));
-        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.99f - halfParkingZoneLength, 0.1f), toRad(-90), true));
+        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.99f - halfParkingZoneLength, 0.1f), toRad(-90), true, false, 0.5f, 0.1f)); // Max throttle of 0.1f will be replaced with min throttle in guidance
 
         // Parking final cw
         // To not change the existing waypoint append scheme this must be implemented as if the parking zone was on the left
         parkingFinalCW.name = "Parking final CW";
         parkingFinalCW.waypoints.clear();
-        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, true));
-        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength - 0.05f, 0.35f), toRad(-90), true));
-        //parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength + 0.07f, 0.6f), toRad(135), true, true));
-        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength - 0.07f, 0.8f), toRad(-90), true, true));
-        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength, 0.1f), toRad(-90), true, false , 0.1f));
-
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.04f, yFullInner), 0.0f, false));
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength, 0.1f), toRad(-90), true, false, 0.5f, 0.1f)); // Max throttle of 0.1f will be replaced with min throttle in guidance
+        
         // Opening run initial
         openingRunInitial.name = "Opening run initial";
         openingRunInitial.waypoints.clear();

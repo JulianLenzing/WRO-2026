@@ -129,7 +129,7 @@ public:
 class Pathfinder
 {
 public:
-    Pathfinder(const RUN_TYPE& pRunType, const bool& pParkingObstacle);
+    Pathfinder(const float& pRobotLength, const RUN_TYPE& pRunType, const bool& pParkingObstacle);
 
     void update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData);
     
@@ -154,6 +154,7 @@ private:
     size_t currentSideIndex;
     size_t round;
     bool stop;
+    const float robotLength;
     enum RUN_DIRECTION runDirection;
     enum PATHFINDER_STATE pathfinderState;
     bool startedLeft;
@@ -176,11 +177,13 @@ private:
     Path fullOuter;
 
     // Parking obstacle
-    Path parkingInner;
-    Path parkingOuter;
+    Path parkingInitialOuter;
 
     Path parkingFinalCCW;
     Path parkingFinalCW;
+
+    Path parkingInner;
+    Path parkingOuter;
 
     // Opening run
     Path openingRunInitial;

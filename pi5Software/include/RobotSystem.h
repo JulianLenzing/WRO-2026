@@ -49,6 +49,7 @@ class RobotSystem{
 #else
 	static constexpr bool parkingObstacle = true;
 #endif
+	static constexpr float length = 0.16f;
 
 	// Pose
 	float heading;
@@ -71,7 +72,7 @@ class RobotSystem{
 		gp(1000,1000, BLACK),
 		displayUI(visibility),
 		lidarDriver(nullptr),
-		environment(runType),
+		environment(length, runType, parkingObstacle),
 		guidanceThread(guidanceMain, ref(guidanceData)),
 		initTime(std::chrono::high_resolution_clock::now()),
 		startTime(std::chrono::high_resolution_clock::now()),
@@ -81,6 +82,6 @@ class RobotSystem{
 		position(0.0f, 0.0f),
 		runDirection(RUN_DIRECTION_CCW),
 		obstacleDetection(),
-		pathfinder(runType, parkingObstacle)
+		pathfinder(length, runType, parkingObstacle)
 	{}
 };
