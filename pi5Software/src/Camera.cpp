@@ -40,6 +40,9 @@ cv::Mat Camera::grabFrame()
         return cv::Mat();
     }
 
+    // Draw a black rectangle to remove unwanted color from outside the parcourse 
+    frame(cv::Rect(0, 0, frame.cols, 23)) = cv::Scalar(0, 0, 0);
+
     return frame;
 }
 
