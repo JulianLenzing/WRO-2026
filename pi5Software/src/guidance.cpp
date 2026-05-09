@@ -74,7 +74,10 @@ void guidanceMain(GuidanceData& guidanceData)
                 float lineDistance = relativePosition.length();
 
                 float direction = currentWaypoint.value().heading;
-                float closingAngle = powf(clamp(lineDistance, 0.0f, currentWaypoint.value().closingDistance) / currentWaypoint.value().closingDistance, 2.0f) * (M_PI/2.0f);
+                float closingDistance = currentWaypoint.value().closingDistance;
+                float exp = 1.0f;
+                    
+                float closingAngle = powf(clamp(lineDistance, 0.0f, closingDistance) / closingDistance, exp) * (M_PI/2.0f);
 
                 if (relativePosition.dot(waypointLine.normal()) > 0.0f) closingAngle = -closingAngle;
                 if (currentWaypoint.value().reverse) closingAngle = -closingAngle;
@@ -105,6 +108,17 @@ void guidanceMain(GuidanceData& guidanceData)
                 float currentAbsoluteSteeringAngle = steering.getAngle();
                 if(currentAbsoluteSteeringAngle > M_PI) currentAbsoluteSteeringAngle = 2*M_PI - currentAbsoluteSteeringAngle;
                 throttle = clamp(float(throttle - (currentAbsoluteSteeringAngle / MAX_STEERING_ANGLE * (maxThrottle - minThrottle))), minThrottle, maxThrottle);
+
+                // Enforce max throttle from waypoint
+                if (throttle > currentWaypoint.value().maxThrottle)
+                {
+                    throttle = currentWaypoint.value().maxThrottle;
+                    if (currentWaypoint.value().maxThrottle < MIN_THROTTLE && !currentWaypoint.value().reverse || currentWaypoint.value().maxThrottle < REVERSE_MIN_THROTTLE && currentWaypoint.value().reverse)
+                    {
+                        if(!currentWaypoint.value().reverse) throttle = MIN_THROTTLE;
+                        else throttle = REVERSE_MIN_THROTTLE;
+                    } 
+                }
 
                 if (currentWaypoint.value().reverse) throttle = -throttle;
                 motor.setThrottle(throttle);
