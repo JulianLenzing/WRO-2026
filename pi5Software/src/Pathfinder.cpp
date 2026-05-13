@@ -1,6 +1,4 @@
 #include "Pathfinder.h"
-#include "../include/Pathfinder.h"
-
 #include "Run_Type.h"
 
 Pathfinder::Pathfinder(const float& pRobotLength, const RUN_TYPE& pRunType, const bool& pParkingObstacle)
@@ -85,7 +83,7 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
         case PATHFINDER_STATE_INITIAL:
         {
             Obstacle obstacle;
-            if(!getSideObstacle(obstacles, 0, obstacle)) return;
+            getSideObstacle(obstacles, 0, obstacle); // May proceed without valid obstacle to enable special cases; Non valid obstacles will be handeled in the getInitialPathFromObstacle function
 
             Path chosenPath;
             if(!getInitialPathFromObstacle(chosenPath, obstacle)) return;
@@ -93,6 +91,7 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath();
 
             // Append the waypoints of the chosen path and correct for run direction
+            printf("Appended path: %s\n", initialSide.path.name);
             for (const Waypoint& wp : initialSide.path.waypoints)
             {
                 guidanceData.appendWaypoint(wp);
@@ -122,6 +121,7 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             }
 
             // Append the waypoints of the chosen path and correct for run direction
+            printf("Appended path: %s\n", sides[currentSideIndex].path.name);
             for (const Waypoint& wp : sides[currentSideIndex].path.waypoints)
             {
                 guidanceData.appendWaypoint(wp);
@@ -153,6 +153,7 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath();
 
             // Append the waypoints of the chosen path and correct for run direction
+            printf("Appended path: %s\n", finalSide.path.name);
             for (const Waypoint& wp : finalSide.path.waypoints)
             {
                 guidanceData.appendWaypoint(wp);
@@ -245,6 +246,8 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
 bool Pathfinder::getInitialPathFromObstacle(Path& path, const Obstacle& obs)
 {
     if((startedLeft && runDirection == RUN_DIRECTION_CW) || (!startedLeft && runDirection == RUN_DIRECTION_CCW)) {path = initial; return true;}
+
+    if (!obs.isValid()) return false;
 
     if(parkingObstacle)
     {
@@ -375,6 +378,20 @@ void Pathfinder::initPaths()
         const float yLightInner{0.7f};
         const float yLightOuter{0.3f};
         const float yFullOuter{0.2f};
+
+        // Unparking path
+        unparkingCCW.name = "Unparking path CCW";
+        unparkingCCW.waypoints.clear();
+        unparkingCCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.5f), M_PI/2.0f, true, false, 0.3f, 0.0f)); // Speed of 0.0f will become MIN_THROTTLE
+        unparkingCCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.3f), M_PI/2.0f, true, true));
+        unparkingCCW.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
+
+        // Unparking path
+        unparkingCW.name = "Unparking path CW";
+        unparkingCW.waypoints.clear();
+        unparkingCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.5f), M_PI/2.0f, true, false, 0.3f, 0.0f)); // Speed of 0.0f will become MIN_THROTTLE
+        unparkingCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.3f), M_PI/2.0f, true, true));
+        unparkingCW.waypoints.push_back(Waypoint(Vec2f(1.5f, 0.5f), M_PI, false));
 
         // Initial
         initial.name = "Initial";

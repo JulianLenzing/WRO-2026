@@ -34,7 +34,7 @@ public:
 
     optional<Vec2f> lidarEstimatePosition(const LidarScan& scan, const Environment& environment, const Vec2f& estimatedPosition);
 
-    int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection);
+    int getRunDirection(const Vec2f& position, const float& heading, const LidarScan& scan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection, const bool& doUnparking);
 
     float minPointDistance = 0.15f;
     float maxPointDistance = 3.65f;

@@ -408,14 +408,14 @@ optional<Vec2f> Slam::lidarEstimatePosition(const LidarScan& scan, const Environ
 }
 
 
-int Slam::getRunDirection(const Vec2f& position, const float& heading, const LidarScan& inputScan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection)
+int Slam::getRunDirection(const Vec2f& position, const float& heading, const LidarScan& inputScan, enum RUN_TYPE runType, enum RUN_DIRECTION& runDirection, const bool& doUnparking)
 {
     LidarScan scan;
     getDistanceUseablePoints(inputScan, scan);
     
     if (scan.scan.size() <= 0) return 0;
 
-    if (runType == RUN_TYPE_OPENING_RUN)
+    if (runType == RUN_TYPE_OPENING_RUN || doUnparking)
     {
         float distanceWallLeft = 0;
         float distanceWallRight = 0;
@@ -435,48 +435,76 @@ int Slam::getRunDirection(const Vec2f& position, const float& heading, const Lid
                 wallCountRight++;
             }
         }
-
-        if (wallCountLeft >= 5 && wallCountRight == 0) {runDirection = RUN_DIRECTION_CW; printf("Determined run direction by point count\n"); return 1;}
-        else if (wallCountRight >= 5 && wallCountLeft == 0) {runDirection = RUN_DIRECTION_CCW; printf("Determined run direction by point count\n"); return 1;}
-
+        
+        if(wallCountLeft >= 1 && wallCountRight >= 1) // Prevent division by 0
+        {
+            distanceWallLeft /= float(wallCountLeft);
+            distanceWallRight /= float(wallCountRight);
+        }
+        else
+        {
+            if (runType == RUN_TYPE_OPENING_RUN) 
+            {
+                if (wallCountLeft >= 5 && wallCountRight == 0) {runDirection = RUN_DIRECTION_CW; printf("Determined run direction by point count\n"); return 1;}
+                else if (wallCountRight >= 5 && wallCountLeft == 0) {runDirection = RUN_DIRECTION_CCW; printf("Determined run direction by point count\n"); return 1;}
+            }
+            else
+            {
+                if (wallCountLeft >= 5 && wallCountRight == 0) {runDirection = RUN_DIRECTION_CCW; printf("Determined run direction by point count\n"); return 1;}
+                else if (wallCountRight >= 5 && wallCountLeft == 0) {runDirection = RUN_DIRECTION_CW; printf("Determined run direction by point count\n"); return 1;}            
+            }
+        }
+    
         if (wallCountLeft <= 5 || wallCountRight <= 5) return 0;
-        distanceWallLeft /= float(wallCountLeft);
-        distanceWallRight /= float(wallCountRight);
 
         printf("Distance Left: %.2f Right: %.2f\n", distanceWallLeft, distanceWallRight);
 
         if (fabs(distanceWallLeft - distanceWallRight) > minWallDistanceDifferenceForOpeningRunDirection)
         {
-            if (distanceWallLeft < distanceWallRight) runDirection = RUN_DIRECTION_CCW;
-            else runDirection = RUN_DIRECTION_CW;
-            printf("Determined run direction by wall distance\n");
-            return 1;
-        }
-    }
-
-    int countLeft = 0;
-    int countRight = 0;
-    for (auto lp : scan.scan)
-    {
-        float perpDistance = fabs(sinf(lp.angle)) * lp.distance; 
-        if(perpDistance > minimumPerpendicularDistanceForObstacleRunDirection) 
-        {
-            if (lp.angle < M_PI && lp.angle > 0)
+            if (runType == RUN_TYPE_OPENING_RUN)
             {
-                countLeft++;
+                if (distanceWallLeft < distanceWallRight) runDirection = RUN_DIRECTION_CCW;
+                else runDirection = RUN_DIRECTION_CW;
+                printf("Determined run direction by wall distance\n");
+                return 1;
             }
             else
             {
-                countRight++;
+                if (distanceWallLeft < distanceWallRight) runDirection = RUN_DIRECTION_CW;
+                else runDirection = RUN_DIRECTION_CCW;
+                printf("Determined run direction by wall distance\n");
+                return 1;
             }
         }
     }
 
-    if (countLeft <= minPointsForObstacleRunDirection && countRight <= minPointsForObstacleRunDirection) return 0;
-    if(abs(countLeft - countRight) < minPointDifferenceForObstacleRunDirection) return 0;
+    if (!doUnparking)
+    {
+        int countLeft = 0;
+        int countRight = 0;
+        for (auto lp : scan.scan)
+        {
+            float perpDistance = fabs(sinf(lp.angle)) * lp.distance; 
+            if(perpDistance > minimumPerpendicularDistanceForObstacleRunDirection) 
+            {
+                if (lp.angle < M_PI && lp.angle > 0)
+                {
+                    countLeft++;
+                }
+                else
+                {
+                    countRight++;
+                }
+            }
+        }
 
-    if (countLeft > countRight) runDirection = RUN_DIRECTION_CCW;
-    else runDirection = RUN_DIRECTION_CW;
-    printf("Determined run direction by average point distance\n");
-    return 1;
+        if (countLeft <= minPointsForObstacleRunDirection && countRight <= minPointsForObstacleRunDirection) return 0;
+        if(abs(countLeft - countRight) < minPointDifferenceForObstacleRunDirection) return 0;
+
+        if (countLeft > countRight) runDirection = RUN_DIRECTION_CCW;
+        else runDirection = RUN_DIRECTION_CW;
+        printf("Determined run direction by average point distance\n");
+        return 1;
+    }
+    return 0;
 }

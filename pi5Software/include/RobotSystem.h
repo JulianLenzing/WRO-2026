@@ -49,6 +49,12 @@ class RobotSystem{
 #else
 	static constexpr bool parkingObstacle = true;
 #endif
+#ifndef DO_UNPARKING
+	static constexpr bool doUnparking = false;
+#else
+	static constexpr bool doUnparking = true;
+#endif
+
 	static constexpr float length = 0.16f;
 
 	// Pose

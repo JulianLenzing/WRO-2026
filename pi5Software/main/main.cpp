@@ -8,9 +8,11 @@
 #include "State.h"
 #include "InitState.h"
 #include "StartState.h"
+#include "FindOrientationState.h"
+#include "UnparkState.h"
+#include "FindPositionState.h"
 #include "RunCourseState.h"
 #include "StopState.h"
-#include "../include/states/FindPositionState.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -26,20 +28,6 @@ static int initGLFW() {
     }
     return 1;
 }
-
-/*
-enum MainState{
-	MainStateInit, 					// Setup software
-	MainStateWaitForStart, 				// For the start button to be pressed
-	MainStateStart, 				// Start Sensors
-	MainStateFindStartingLocation, 			// Find which in which of the possible locations the robot is
-	MainStateUnpark, 				// Leave the parking area
-	MainStateRunCourse,				// Complete the rounds and pass obstacles on the correct side
-	MainStatePark,					// Leave the vehicle inside the parking area
-	MainStateEnd,					// Stop sensors
-	MainStateDeinit					// Free resources and stop software
-};
-*/
 
 #include "DisplayData.h"
 
@@ -59,6 +47,8 @@ int main(){
 	StateMachine sm;
 	InitState initState;
 	StartState startState;
+	FindOrientationState findOrientationState;
+	UnparkState unparkState;
 	FindPositionState findPositionState;
 	RunCourseState runCourseState;
 	StopState stopState;
@@ -71,6 +61,15 @@ int main(){
 			sm.setState(&stopState, robot);
 			return 0;
 		}
+	}
+
+	sm.setState(&findOrientationState, robot);
+	while (!sm.update(robot)){}
+	
+	if(robot.doUnparking)
+	{
+		sm.setState(&unparkState, robot);
+		while (!sm.update(robot)){}
 	}
 
 	sm.setState(&findPositionState, robot);

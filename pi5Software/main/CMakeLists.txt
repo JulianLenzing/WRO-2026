@@ -64,6 +64,11 @@ if(PARKING_OBSTACLE AND NOT OPENING_RUN)
 	target_compile_definitions(main PRIVATE PARKING_OBSTACLE)
 endif()
 
+option(DO_UNPARKING "Enable support for unparking" ON)
+if(DO_UNPARKING AND NOT OPENING_RUN AND PARKING_OBSTACLE)
+	target_compile_definitions(main PRIVATE DO_UNPARKING)
+endif()
+
 option(SIMULATION "Enable support for the godot simulation" OFF)
 if(SIMULATION)
 	target_compile_definitions(main PRIVATE SIMULATION)

@@ -10,27 +10,6 @@
 class FindPositionState : public State{
     void enter(RobotSystem& robot) override
     {
-        robot.position = Vec2f(1.5f, 0.5f);
-
-        // Determine run direction
-        robot.initSlam.minPointDistance = 0.05f;
-		robot.initSlam.maxDistanceDeviation = 0.7f;
-
-        LidarScan lidarScan;
-        do
-        {
-            getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
-            printf("Determining run direction\n");
-        }
-        while (!robot.initSlam.getRunDirection(robot.position, robot.heading, lidarScan, robot.runType, robot.runDirection));
-        printf("Run direction: ");
-        if(robot.runDirection == RUN_DIRECTION_CCW) printf("CCW\n");
-        else printf("CW\n");
-
-        if (robot.runDirection == RUN_DIRECTION_CCW) robot.heading = 0;
-        else robot.heading = M_PI;
-        robot.pathfinder.setRunDirection(robot.runDirection);
-        
         robot.initSlam.minPointDistance = robot.slam.minPointDistance;
 		robot.initSlam.maxDistanceDeviation = 0.7f;
     }
@@ -95,7 +74,8 @@ class FindPositionState : public State{
 
     void exit(RobotSystem& robot) override
     {
-        robot.pathfinder.setStartingPosition(robot.position);
+        if (!robot.doUnparking) robot.pathfinder.setStartingPosition(robot.position);
+        else robot.pathfinder.setStartingPosition(Vec2f(2.0f, 0.5f));
     }
 
     std::string name() const override {return "Find position state";}

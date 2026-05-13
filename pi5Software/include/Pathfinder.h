@@ -147,6 +147,24 @@ public:
     
     bool getStartedLeft() {return startedLeft;}
 
+    void appendUnparkingPath(GuidanceData& guidanceData)
+    {
+        if (runDirection == RUN_DIRECTION_CCW)
+        {
+            for (const Waypoint& wp : unparkingCCW.waypoints)
+            {
+                guidanceData.appendWaypoint(wp);
+            }
+        }
+        else
+        {
+            for (const Waypoint& wp : unparkingCW.waypoints)
+            {
+                guidanceData.appendWaypoint(wp);
+            }
+        }
+    }
+
 private:
     std::vector<Side> sides;
     Side initialSide;
@@ -160,6 +178,10 @@ private:
     bool startedLeft;
     const RUN_TYPE runType;
     const bool parkingObstacle;
+
+    // Unparking path
+    Path unparkingCCW;
+    Path unparkingCW;
 
     // Obstacle run
     Path initial;
