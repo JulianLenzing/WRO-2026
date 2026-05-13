@@ -17,7 +17,7 @@
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
 #define MAX_THROTTLE 1.0f
-#define MIN_THROTTLE 0.25f
+#define MIN_THROTTLE 0.24f
 #define REVERSE_MAX_THROTTLE 1.0f
 #define REVERSE_MIN_THROTTLE 0.35f
 #define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
@@ -35,6 +35,9 @@ void guidanceMain(GuidanceData& guidanceData)
 	MotorController motor(1, MOTOR_DUTY_CYCLE_RANGE);
     steering.invert();
     steering.setMiddle();
+    motor.setThrottle(0.0f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    
 
     optional<Waypoint> currentWaypoint;
     float heading = 0;
