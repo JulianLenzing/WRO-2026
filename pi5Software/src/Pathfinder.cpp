@@ -515,14 +515,14 @@ void Pathfinder::initPaths()
         parkingFinalCCW.waypoints.clear();
         parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false));
         parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.5f, yFullInner), 0.0f, true));
-        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(1.99f - halfParkingZoneLength, 0.1f), toRad(-90), true, false, 0.5f, 0.1f)); // Max throttle of 0.1f will be replaced with min throttle in guidance
+        parkingFinalCCW.waypoints.push_back(Waypoint(Vec2f(2.0f - halfParkingZoneLength, 0.1f), toRad(-90), true, false, 0.5f, 0.1f)); // Max throttle of 0.1f will be replaced with min throttle in guidance
 
         // Parking final cw
         // To not change the existing waypoint append scheme this must be implemented as if the parking zone was on the left
         parkingFinalCW.name = "Parking final CW";
         parkingFinalCW.waypoints.clear();
         parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.04f, yFullInner), 0.0f, false));
-        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.01f + halfParkingZoneLength, 0.1f), toRad(-90), true, false, 0.5f, 0.1f)); // Max throttle of 0.1f will be replaced with min throttle in guidance
+        parkingFinalCW.waypoints.push_back(Waypoint(Vec2f(1.0f + halfParkingZoneLength, 0.1f), toRad(-90), true, false, 0.5f, 0.1f)); // Max throttle of 0.1f will be replaced with min throttle in guidance
         
         // Opening run initial
         openingRunInitial.name = "Opening run initial";

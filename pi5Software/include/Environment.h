@@ -46,8 +46,8 @@ public:
         else 
         {
             landmarks.emplace_back(Landmark(outerBottomLeft, Vec2f(1.98f - parkingObstacleLength, 0.0f), true));
-            landmarks.emplace_back(Landmark(Vec2f(1.98f - parkingObstacleLength, 0.0f), Vec2f(1.98f, 0.0f), false));
-            landmarks.emplace_back(Landmark(Vec2f(1.98f, 0.0f), Vec2f(outerLength, 0.0f), true));            
+            landmarks.emplace_back(Landmark(Vec2f(2.0f - parkingObstacleLength, 0.0f), Vec2f(2.0f, 0.0f), false));
+            landmarks.emplace_back(Landmark(Vec2f(2.0f, 0.0f), Vec2f(outerLength, 0.0f), true));            
         }
 
         landmarks.emplace_back(Landmark(innerBottomLeft, innerBottomLeft + Vec2f(0, innerLength), innerBoundariesAreUseable));
@@ -57,8 +57,8 @@ public:
         
         if(parkingObstacle)
         {        
-            landmarks.emplace_back(Landmark(Vec2f(1.98f, 0.0f), Vec2f(1.98f, 0.2f), false));
-            landmarks.emplace_back(Landmark(Vec2f(1.98f - parkingObstacleLength, 0.0f), Vec2f(1.98f - parkingObstacleLength, 0.2f), false));
+            landmarks.emplace_back(Landmark(Vec2f(2.0f, 0.0f), Vec2f(1.98f, 0.2f), false));
+            landmarks.emplace_back(Landmark(Vec2f(2.0f - parkingObstacleLength, 0.0f), Vec2f(2.0f - parkingObstacleLength, 0.2f), false));
         }
     }
     
