@@ -2,8 +2,8 @@
 
 #include "../include/RobotSystem.h"
 
-#define LIDAR_POSITION_TAU 0.001f
-#define LIDAR_HEADING_TAU 0.8f
+#define LIDAR_POSITION_TAU 0.8f
+#define LIDAR_HEADING_TAU 0.26f
 
 // Helper
 Vec2f boundPosition(Vec2f position, Environment environment) {
@@ -29,7 +29,6 @@ void updateEncoder(RobotSystem& robot)
     float deltaDistance = 0;
     float deltaHeading = 0;
     if(!robot.encoderController.getEncodingData(deltaDistance, deltaHeading)) {
-        printf("Could not grab encoder data!\n");
         robot.displayUI.encoderStatus = false;
     }
     else robot.displayUI.encoderStatus = true;
@@ -59,7 +58,7 @@ void updateLidar(RobotSystem& robot, std::chrono::milliseconds lidarDt)
     }
 
     LidarScan lidarScan;
-    getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
+    robot.lidar.getScan(lidarScan);
     lidarScan.rotate(robot.heading); // Rotate scan to align with robot's heading
     float beginningHeading = robot.heading;
 

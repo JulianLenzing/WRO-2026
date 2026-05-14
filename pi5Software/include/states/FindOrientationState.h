@@ -17,7 +17,7 @@ class FindOrientationState : public State{
     bool update(RobotSystem& robot) override
     {
         LidarScan lidarScan;
-        getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
+        robot.lidar.getScan(lidarScan);
         printf("Determining run direction\n");
         if(!robot.initSlam.getRunDirection(robot.position, robot.heading, lidarScan, robot.runType, robot.runDirection, robot.doUnparking)) return false;
 

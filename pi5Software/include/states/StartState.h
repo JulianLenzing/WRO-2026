@@ -29,7 +29,7 @@ class StartState : public State{
 		robot.heading = 0.0f;
 
 		// Start Lidar
-		startLidar(robot.lidarDriver);
+		robot.lidar.start();
 
 		// Init other sensors
 		robot.encoderController.reset();

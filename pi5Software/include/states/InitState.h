@@ -6,8 +6,7 @@
 class InitState : public State{
 	void enter(RobotSystem& robot) override
     {
-        robot.lidarDriver = initLidar();
-        if(!robot.lidarDriver) printf("Lidar driver not initialized\n");
+        if(!robot.lidar.init()) printf("Lidar driver not initialized\n");
         robot.displayUI.update();
         //robot.gp.setPosition(800, 0); Only on X11 
         dpd.clear();

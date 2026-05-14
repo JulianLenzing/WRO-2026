@@ -6,7 +6,7 @@ class StopState : public State{
 	void enter(RobotSystem& robot) override
   {
     // Stop sensors
-    stopLidar(robot.lidarDriver);
+    robot.lidar.stop();
 
     // Stop other threads
     robot.guidanceData.terminate();

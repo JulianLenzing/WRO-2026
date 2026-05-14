@@ -29,7 +29,7 @@ class FindPositionState : public State{
             }
 
             LidarScan lidarScan;
-            getLidarScan(robot.lidarDriver, lidarScan, 1, 0.25);
+            robot.lidar.getScan(lidarScan);
             lidarScan.rotate(robot.heading); // Rotate scan to align with robot's heading
             float beginningHeading = robot.heading;
 
