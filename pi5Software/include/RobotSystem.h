@@ -75,7 +75,7 @@ class RobotSystem{
 		encoderController(gpioController),
 		gyro(),
 		camera(),
-		lidar(1.0f, 0.2f),
+		lidar(1.0f, 0.3f),
 		gp(1000,1000, BLACK),
 		displayUI(visibility),
 		environment(length, runType, parkingObstacle),

@@ -117,8 +117,8 @@ public:
         // ========================
         cv::Mat redMask1, redMask2, redMask;
 
-        cv::Scalar redLower1(0, 160, 110);
-        cv::Scalar redUpper1(5, 255, 255);
+        cv::Scalar redLower1(0, 140, 110);
+        cv::Scalar redUpper1(10, 255, 255);
 
         cv::Scalar redLower2(155, 130, 110);
         cv::Scalar redUpper2(180, 255, 255);

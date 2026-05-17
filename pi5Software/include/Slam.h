@@ -38,7 +38,7 @@ public:
 
     float minPointDistance = 0.15f;
     float maxPointDistance = 3.65f;
-    float maxDeltaPosition = 0.2f;
+    float maxDeltaPosition = 0.1f;
     float maxDistanceDeviation = 0.25f;
 
     int minPointsForLine = 35;
