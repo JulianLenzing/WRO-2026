@@ -428,7 +428,7 @@ void Pathfinder::initPaths()
         
         nextLate.name = "Next late";
         nextLate.waypoints.clear();
-        nextLate.waypoints.push_back(Waypoint(Vec2f(2.5f, 1.3f), M_PI/2.0f, false));
+        nextLate.waypoints.push_back(Waypoint(Vec2f(2.5f, 1.1f), M_PI/2.0f, false));
 
         // Unparking path CCW
         unparkingCCW.name = "Unparking path CCW";
@@ -495,7 +495,7 @@ void Pathfinder::initPaths()
         lightInner.waypoints.clear();
         lightInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightInner), 0.0f, false));
         lightInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightInner), 0.0f, false));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, true));        
+        lightInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, false));        
 
         // Light outer
         lightOuter.name = "Light outer";
@@ -515,29 +515,20 @@ void Pathfinder::initPaths()
         parkingInitialOuter.name = "Parking initial outer";
         parkingInitialOuter.waypoints.clear();
         parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, 0.4f), 0.0f, false));
-        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
-        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
-        parkingInitialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
 
         // Parking inner
         parkingInner.name = "Parking inner";
         parkingInner.waypoints.clear();
         parkingInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false));
         parkingInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullInner), 0.0f, false));
-        parkingInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
-        parkingInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
-        parkingInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
-        parkingInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
+        parkingInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, false));
 
         // Parking outer
         parkingOuter.name = "Parking outer";
         parkingOuter.waypoints.clear();
         parkingOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, 0.4f), 0.0f, false));
         parkingOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, 0.4f), 0.0f, false));
-        parkingOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, 0.4f), 0.0f, true));
-        parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.2f, 0.3f), 0.0f, false));
-        parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), toRad(90), true));
-        parkingOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), toRad(90), true, true));
+        parkingOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, 0.4f), 0.0f, false));
 
         float halfParkingZoneLength = robotLength * 1.5f / 2.0f;
         // Parking final ccw
