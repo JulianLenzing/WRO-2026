@@ -7,7 +7,7 @@
 sl::ILidarDriver* initLidar();
 int startLidar(sl::ILidarDriver* drv);
 int getLidarScan(sl::ILidarDriver* drv, LidarScan& scan, float scale = 1.0f, float subtractor = 0);
-void stopLidar(sl::ILidarDriver* drv);
+void stopLidar(sl::ILidarDriver*& drv);
 
 class Lidar
 {
@@ -18,6 +18,11 @@ public:
 		subtractor(pSubtractor),
 		driver(nullptr)
 		{}
+		
+	~Lidar()
+	{
+		stop();
+	}
 		
 	bool init()
 	{

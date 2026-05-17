@@ -173,11 +173,11 @@ int getLidarScan(ILidarDriver * drv, LidarScan& scan, float scale, float subtrac
 		*/			
 		if(nodes[pos].dist_mm_q2 != 0.0f) {
 			float angle = (nodes[pos].angle_z_q14 * 90.0f) / 16384.0f;
-			angle = (angle / 180.0f * M_PI) + M_PI*1.5;	
+			angle = (angle / 180.0f * M_PI) + M_PI*1.5;	// Rotate
 			angle = fmodf(angle, 2*M_PI);
-			angle = 2*M_PI - angle;
+			angle = 2*M_PI - angle; // Convert to CCW
 			angle = fmodf(angle, 2*M_PI);
-			float distance = ((nodes[pos].dist_mm_q2 / 4.0f / 1000.0f) * scale) - subtractor;		
+			float distance = ((nodes[pos].dist_mm_q2 / 4.0f / 1000.0f) - subtractor) * scale; // First subtract then scale		
 			if (distance > 0) scan.scan.emplace_back(angle, distance);
 		}			
 	}
@@ -185,12 +185,11 @@ int getLidarScan(ILidarDriver * drv, LidarScan& scan, float scale, float subtrac
 	return 1;
 }
 
-void stopLidar(ILidarDriver* drv) {
+void stopLidar(ILidarDriver*& drv) {  // pass by reference
+    if(!drv) return;
     drv->stop();
-	delay_ms(20);
-	drv->setMotorSpeed(0);		
-    if(drv) {
-        delete drv;
-        drv = NULL;
-    }
+    delay_ms(20);
+    drv->setMotorSpeed(0);
+    delete drv;
+    drv = nullptr;  // now actually nulls the original pointer
 }
