@@ -74,6 +74,33 @@ bool Pathfinder::getSideObstacle(std::vector<Obstacle> obstacles, int sideIndex,
     return true;
 }
 
+void Pathfinder::indexToNextSide()
+{
+    // Index to next side
+    if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
+    else currentSideIndex--;
+    currentSideIndex = (currentSideIndex + 4) % 4;
+    if (currentSideIndex == 0) round++;
+}
+
+int Pathfinder::getNextSideIndex()
+{    
+    int index = currentSideIndex;
+    if (runDirection == RUN_DIRECTION_CCW) index++;
+    else index--;
+    index = (index + 4) % 4;
+    return index;
+}
+
+void Pathfinder::appendPath(GuidanceData& guidanceData, const Path& path)
+{
+    printf("Appended path: %s\n", path.name.c_str());
+    for (const Waypoint& wp : path.waypoints)
+    {
+        guidanceData.appendWaypoint(wp);
+    }
+}
+
 void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obstacles, GuidanceData& guidanceData)
 {
     if (runType == RUN_TYPE_OBSTACLE_RUN) // Configure for obstacle run
@@ -85,56 +112,44 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             Obstacle obstacle;
             getSideObstacle(obstacles, 0, obstacle); // May proceed without valid obstacle to enable special cases; Non valid obstacles will be handeled in the getInitialPathFromObstacle function
 
-            Path chosenPath;
-            if(!getInitialPathFromObstacle(chosenPath, obstacle)) return;
-            initialSide.copyPath(chosenPath);
-            if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath();
-
-            // Append the waypoints of the chosen path and correct for run direction
-            printf("Appended path: %s\n", initialSide.path.name);
-            for (const Waypoint& wp : initialSide.path.waypoints)
-            {
-                guidanceData.appendWaypoint(wp);
-            }
-
-            // Index to next side
-            if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-            else currentSideIndex--;
-            currentSideIndex = (currentSideIndex + 4) % 4;
+            Path currentPath;
+            if(!getInitialPathFromObstacle(currentPath, obstacle)) return;
+            currentPath = initialSide.orientPath(currentPath);
+            if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath(currentPath);            
+            appendPath(guidanceData, currentPath);
+            
+            Path cornerPath = getCornerPath(sides[getNextSideIndex()].obstacle);        
+            cornerPath = initialSide.orientPath(cornerPath);
+            if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath(cornerPath);
+            appendPath(guidanceData, cornerPath);
+            
+            indexToNextSide();
             pathfinderState = PATHFINDER_STATE_SIDES;
-            //printf("Init Round: %d Index: %d\n", round, currentSideIndex);
         }
             break;
 
         case PATHFINDER_STATE_SIDES:
-        {
-            //printf("Current Index: %d\n", currentSideIndex);
-            if (!sides[currentSideIndex].hasPath)
+        {            
+            if(!sides[currentSideIndex].obstacle.isValid())
             {
-                // If the current side does not have a path one must be determined
                 Obstacle obstacle;
                 if(!getSideObstacle(obstacles, currentSideIndex, obstacle)) return;
                 if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
-
-                sides[currentSideIndex].copyPath(getPathFromObstacle(obstacle, currentSideIndex));
-                if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath();
+                sides[currentSideIndex].obstacle = obstacle;
             }
 
-            // Append the waypoints of the chosen path and correct for run direction
-            printf("Appended path: %s\n", sides[currentSideIndex].path.name);
-            for (const Waypoint& wp : sides[currentSideIndex].path.waypoints)
-            {
-                guidanceData.appendWaypoint(wp);
-            }
+            Path currentPath;
+            currentPath = sides[currentSideIndex].orientPath(getPathFromObstacle(sides[currentSideIndex].obstacle, currentSideIndex));
+            if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath(currentPath);            
+            appendPath(guidanceData, currentPath);
+            
+            Path cornerPath = getCornerPath(sides[getNextSideIndex()].obstacle);        
+            cornerPath = sides[currentSideIndex].orientPath(cornerPath);
+            if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath(cornerPath);
+            appendPath(guidanceData, cornerPath);            
 
-            // Index to next side
-            if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-            else currentSideIndex--;
-            currentSideIndex = (currentSideIndex + 4) % 4;
-            if (currentSideIndex == 0) round++;
-
-            //printf("Round: %d Index: %d\n", round, currentSideIndex);
-
+            indexToNextSide();
+            
             if (round == ROUNDS_TO_DRIVE + 1)
             {
                 pathfinderState = PATHFINDER_STATE_FINAL;
@@ -149,15 +164,10 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
             if(!getSideObstacle(obstacles, 0, obstacle)) return;
             if (obstacle.getColor() == OBSTACLE_COLOUR_UNKNOWN) return;
 
-            finalSide.copyPath(getFinalPathFromObstacle(obstacle));
-            if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath();
-
-            // Append the waypoints of the chosen path and correct for run direction
-            printf("Appended path: %s\n", finalSide.path.name);
-            for (const Waypoint& wp : finalSide.path.waypoints)
-            {
-                guidanceData.appendWaypoint(wp);
-            }
+            Path currentPath;
+            currentPath = finalSide.orientPath(getFinalPathFromObstacle(obstacle));
+            if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath(currentPath);
+            appendPath(guidanceData, currentPath);
 
             pathfinderState = PATHFINDER_STATE_STOP;
         }
@@ -173,67 +183,54 @@ void Pathfinder::update(Vec2f position, float heading, std::vector<Obstacle> obs
         switch (pathfinderState)
         {
         case PATHFINDER_STATE_INITIAL:
-            initialSide.copyPath(openingRunInitial);
-            if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath();
+        {
+            Path currentPath = initialSide.orientPath(openingRunInitial);
+            if (runDirection == RUN_DIRECTION_CW) initialSide.mirrorPath(currentPath);
 
-            for (const Waypoint& wp : initialSide.path.waypoints)
-            {
-                guidanceData.appendWaypoint(wp);
-            }
+            appendPath(guidanceData, currentPath);
 
-            // Index to next side
-            if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-            else currentSideIndex--;
-            currentSideIndex = (currentSideIndex + 4) % 4;
+            indexToNextSide();
             pathfinderState = PATHFINDER_STATE_SIDES;
+        }
             break;
 
-        case PATHFINDER_STATE_SIDES:
-            if (!sides[currentSideIndex].hasPath)
-            {
-                sides[currentSideIndex].copyPath(openingRunPath);
-                if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath();
-            }
+        case PATHFINDER_STATE_SIDES:            
+        {
+            Path currentPath = sides[currentSideIndex].orientPath(openingRunPath);
+            if (runDirection == RUN_DIRECTION_CW) sides[currentSideIndex].mirrorPath(currentPath);
+            
+            appendPath(guidanceData, currentPath);
 
-            for (const Waypoint& wp : sides[currentSideIndex].path.waypoints)
-            {
-                guidanceData.appendWaypoint(wp);
-            }
-
-            // Index to next side
-            if (runDirection == RUN_DIRECTION_CCW) currentSideIndex++;
-            else currentSideIndex--;
-            currentSideIndex = (currentSideIndex + 4) % 4;
-            if (currentSideIndex == 0) round++;
+            indexToNextSide();
 
             if (round == ROUNDS_TO_DRIVE + 1)
             {
                 pathfinderState = PATHFINDER_STATE_FINAL;
                 round = ROUNDS_TO_DRIVE;
             }
-
+        }
             break;
 
         case PATHFINDER_STATE_FINAL:
+        {
+            Path currentPath;
             if (startedLeft)
             {
-                if (runDirection == RUN_DIRECTION_CCW) finalSide.copyPath(openingRunFinalLeft);
-                else finalSide.copyPath(openingRunFinalRight);
+                if (runDirection == RUN_DIRECTION_CCW) currentPath = finalSide.orientPath(openingRunFinalLeft);
+                else currentPath = finalSide.orientPath(openingRunFinalRight);
             }
             else
             {
-                if (runDirection == RUN_DIRECTION_CCW) finalSide.copyPath(openingRunFinalRight);
-                else finalSide.copyPath(openingRunFinalLeft);
+                if (runDirection == RUN_DIRECTION_CCW) currentPath = finalSide.orientPath(openingRunFinalRight);
+                else currentPath = finalSide.orientPath(openingRunFinalLeft);
             }
             
-            if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath();
+            if (runDirection == RUN_DIRECTION_CW) finalSide.mirrorPath(currentPath);
 
-            for (const Waypoint& wp : finalSide.path.waypoints)
-            {
-                guidanceData.appendWaypoint(wp);
-            }
+            appendPath(guidanceData, currentPath);
 
             pathfinderState = PATHFINDER_STATE_STOP;
+         }
             break;
 
         case PATHFINDER_STATE_STOP:
@@ -367,6 +364,22 @@ Path Pathfinder::getPathFromObstacle(const Obstacle& obs, int sideIndex)
     return fullOuter; // Suppress compiler warning
 }
 
+Path Pathfinder::getCornerPath(const Obstacle& nextObs)
+{
+    if(!nextObs.isValid()) return nextImmediate;
+    
+    if(runDirection == RUN_DIRECTION_CCW)
+    {
+        if(nextObs.positionNumber == 1 || nextObs.positionNumber == 4) return nextImmediate;
+        else return nextLate;
+    }
+    else
+    {
+        if(nextObs.positionNumber == 3 || nextObs.positionNumber == 6) return nextImmediate;
+        else return nextLate;
+    }
+}
+
 void Pathfinder::initPaths()
     {
         // Base Values
@@ -378,15 +391,53 @@ void Pathfinder::initPaths()
         const float yLightInner{0.7f};
         const float yLightOuter{0.3f};
         const float yFullOuter{0.2f};
+        
+        // Corner paths
+        /*
+        nextImmediateCurrentFullInner.name = "Next immediate current full inner";
+        nextImmediateCurrentFullInner.waypoints.clear();
+        nextImmediateCurrentFullInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
+        nextImmediateCurrentFullInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
+        nextImmediateCurrentFullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
+        
+        nextImmediateCurrentLightInner.name = "Next immediate current light inner";
+        nextImmediateCurrentLightInner.waypoints.clear();        
+        nextImmediateCurrentLightInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.4f), toRad(-70), false));
+        nextImmediateCurrentLightInner.waypoints.push_back(Waypoint(Vec2f(2.6f, 0.6f), toRad(90), true));
+        nextImmediateCurrentLightInner.waypoints.push_back(Waypoint(Vec2f(2.55f, 0.35f), toRad(90), true, true));
+        nextImmediateCurrentLightInner.waypoints.push_back(Waypoint(Vec2f(2.58f, 0.2f), toRad(90), true, true));
+        
+        nextImmediateCurrentFullOuter.name = "Next immediate current full outer";
+        nextImmediateCurrentFullOuter.waypoints.clear();        
+        nextImmediateCurrentFullOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
+        nextImmediateCurrentFullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
+        nextImmediateCurrentFullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
+        
+        nextImmediateCurrentLightOuter.name = "Next immediate current light outer";
+        nextImmediateCurrentLightOuter.waypoints.clear();     
+        nextImmediateCurrentLightOuter.waypoints.push_back(Waypoint(Vec2f(2.2f, 0.3f), 0.0f, false));
+        nextImmediateCurrentLightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), toRad(90), true));
+        nextImmediateCurrentLightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), toRad(90), true, true));
+        */
+        
+        nextImmediate.name = "Next immediate";
+        nextImmediate.waypoints.clear();
+        nextImmediate.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
+        nextImmediate.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
+        nextImmediate.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));        
+        
+        nextLate.name = "Next late";
+        nextLate.waypoints.clear();
+        nextLate.waypoints.push_back(Waypoint(Vec2f(2.5f, 1.3f), M_PI/2.0f, false));
 
-        // Unparking path
+        // Unparking path CCW
         unparkingCCW.name = "Unparking path CCW";
         unparkingCCW.waypoints.clear();
         unparkingCCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.5f), M_PI/2.0f, true, false, 0.3f, 0.0f)); // Speed of 0.0f will become MIN_THROTTLE
         unparkingCCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.3f), M_PI/2.0f, true, true));
         unparkingCCW.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
 
-        // Unparking path
+        // Unparking path CW
         unparkingCW.name = "Unparking path CW";
         unparkingCW.waypoints.clear();
         unparkingCW.waypoints.push_back(Waypoint(Vec2f(2.0f - robotLength / 2.0f - 0.1f, 0.5f), M_PI/2.0f, true, false, 0.3f, 0.0f)); // Speed of 0.0f will become MIN_THROTTLE
@@ -397,24 +448,16 @@ void Pathfinder::initPaths()
         initial.name = "Initial";
         initial.waypoints.clear();
         initial.waypoints.push_back(Waypoint(Vec2f(2.0f, 0.5f), 0.0f, false));
-        initial.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
-        initial.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, true, true));
         
         // Initial outer
         initialOuter.name = "Initial outer";
         initialOuter.waypoints.clear();
         initialOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, false));
-        initialOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
-        initialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
-        initialOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
 
         // Initial inner
         initialInner.name = "Initial inner";
         initialInner.waypoints.clear();
         initialInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
-        initialInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
-        initialInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
-        initialInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true, 0.35f));
 
         // Final outer left
         finalOuterLeft.name = "Final outer left";
@@ -445,41 +488,28 @@ void Pathfinder::initPaths()
         fullInner.waypoints.clear();
         fullInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullInner), 0.0f, false));
         fullInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullInner), 0.0f, false));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, true));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.6f), toRad(-30), false));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.8f, 0.5f), 0.0f, true));
-        fullInner.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), M_PI/2.0f, false, true));
+        fullInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullInner), 0.0f, false));        
 
         // Light inner
         lightInner.name = "Light inner";
         lightInner.waypoints.clear();
         lightInner.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightInner), 0.0f, false));
         lightInner.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightInner), 0.0f, false));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, true));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.4f), toRad(-70), false));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.6f, 0.6f), toRad(90), true));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.55f, 0.35f), toRad(90), true, true));
-        lightInner.waypoints.push_back(Waypoint(Vec2f(2.58f, 0.2f), toRad(90), true, true));
+        lightInner.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightInner), 0.0f, true));        
 
         // Light outer
         lightOuter.name = "Light outer";
         lightOuter.waypoints.clear();
         lightOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yLightOuter), 0.0f, false));
         lightOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yLightOuter), 0.0f, false));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightOuter), 0.0f, true));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.2f, 0.3f), 0.0f, false));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.6f), toRad(90), true));
-        lightOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.3f), toRad(90), true, true));
+        lightOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yLightOuter), 0.0f, false));        
 
         // Full outer
         fullOuter.name = "Full outer";
         fullOuter.waypoints.clear();
         fullOuter.waypoints.push_back(Waypoint(Vec2f(xFirstWaypoint, yFullOuter), 0.0f, false));
         fullOuter.waypoints.push_back(Waypoint(Vec2f(xSecondWaypoint, yFullOuter), 0.0f, false));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, false));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.3f, 0.2f), 0.0f, false));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.5f), toRad(90), true));
-        fullOuter.waypoints.push_back(Waypoint(Vec2f(2.5f, 0.2f), toRad(90), true, true));
+        fullOuter.waypoints.push_back(Waypoint(Vec2f(xThirdWaypoint, yFullOuter), 0.0f, false));        
 
         // Parking initial outer
         parkingInitialOuter.name = "Parking initial outer";

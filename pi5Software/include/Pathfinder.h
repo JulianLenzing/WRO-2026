@@ -45,9 +45,21 @@ public:
 class Side
 {
 public:
-    Side(Vec2f pBasePosition, float pDirection, Vec2f pLowerLeft, Vec2f pUpperRight, Vec2f pMiddle) : basePosition(pBasePosition), direction(pDirection), middle(pMiddle), hasPath(false), lowerLeft(pLowerLeft), upperRight(pUpperRight) {}
-    Side() : basePosition(Vec2f(0.0f, 0.0f)), direction(0.0f), lowerLeft(Vec2f(0.0f, 0.0f)),
-    upperRight(Vec2f(0.0f, 0.0f)), middle(Vec2f(0.0f, 0.0f)), hasPath(false) {}
+    Side(Vec2f pBasePosition, float pDirection, Vec2f pLowerLeft, Vec2f pUpperRight, Vec2f pMiddle) 
+        : 
+        basePosition(pBasePosition), 
+        direction(pDirection), 
+        middle(pMiddle), 
+        lowerLeft(pLowerLeft), 
+        upperRight(pUpperRight) {}
+        
+    Side() 
+    : 
+    basePosition(Vec2f(0.0f, 0.0f)), 
+    direction(0.0f), lowerLeft(Vec2f(0.0f, 0.0f)),
+    upperRight(Vec2f(0.0f, 0.0f)), 
+    middle(Vec2f(0.0f, 0.0f)) {}
+    
     ~Side() {}
 
     Side& operator=(const Side& other)
@@ -58,20 +70,18 @@ public:
         basePosition = other.basePosition;
         direction    = other.direction;
         middle       = other.middle;
-        hasPath      = other.hasPath;
         lowerLeft    = other.lowerLeft;
         upperRight   = other.upperRight;
 
         return *this;
     }
 
-    void copyPath(const Path& otherPath)
+    Path orientPath(const Path& otherPath)
     {
-        hasPath = true;
         float deltaDirection = direction;
         Vec2f deltaBasePosition = basePosition;
 
-        path = otherPath; // copy name + waypoints
+        Path path = otherPath; // copy name + waypoints
 
         // Rotate by deltaDirection
         float cosA = cos(deltaDirection);
@@ -91,9 +101,10 @@ public:
             wp.point = rotated + basePosition;
             wp.heading += deltaDirection;
         }
+        return path;
     }
 
-    void mirrorPath()
+    void mirrorPath(Path& path)
     {
         for (Waypoint& wp : path.waypoints)
         {
@@ -122,8 +133,7 @@ public:
     Vec2f lowerLeft;
     Vec2f upperRight;
     Vec2f middle;
-    Path path;
-    bool hasPath;
+    Obstacle obstacle;
 };
 
 class Pathfinder
@@ -212,12 +222,30 @@ private:
     Path openingRunFinalLeft;
     Path openingRunFinalRight;
     Path openingRunPath;
+    
+    // Corner paths
+    /*
+    Path nextImmediateCurrentFullInner;
+    Path nextImmediateCurrentLightInner;
+    Path nextImmediateCurrentFullOuter;
+    Path nextImmediateCurrentLightOuter;
+    */
+    Path nextImmediate;    
+    Path nextLate;
+    
+    void appendPath(GuidanceData& guidanceData, const Path& path);
+    
+    void indexToNextSide();
+    
+    int getNextSideIndex();
 
     bool getInitialPathFromObstacle(Path& path, const Obstacle& obs);
 
     Path getFinalPathFromObstacle(const Obstacle& obs);
 
     Path getPathFromObstacle(const Obstacle& obs, int sideIndex = 1); // 1 as default for backward compatibility
+    
+    Path getCornerPath(const Obstacle& nextObs);
 
     bool inBox(Vec2f p, Vec2f lowerLeft, Vec2f upperRight)
     {
