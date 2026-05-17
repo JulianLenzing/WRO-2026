@@ -12,6 +12,7 @@ class FindPositionState : public State{
     {
         robot.initSlam.minPointDistance = robot.slam.minPointDistance;
 		robot.initSlam.maxDistanceDeviation = 0.7f;
+        robot.initSlam.maxDeltaPosition = 0.0f;
     }
 
     bool update(RobotSystem& robot) override
@@ -57,6 +58,7 @@ class FindPositionState : public State{
             auto maybeNewEstimatedPosition = robot.initSlam.lidarEstimatePosition(useableScan, robot.environment, robot.position);
 
             if(maybeNewEstimatedPosition.has_value()) {
+                iterations++; // Only increase iteration count if a valid position was found
                 robot.position = maybeNewEstimatedPosition.value();
 
                 Vec2f tmp = maybeNewEstimatedPosition.value();
@@ -64,8 +66,7 @@ class FindPositionState : public State{
                 if(lidarHeading.has_value()) dpd.appendLine(Line(tmp, Vec2f(tmp.x + cos(lidarHeading.value()) * length, tmp.y + sin(lidarHeading.value()) * length)), YELLOW);
             }
 
-            robot.gp.update(dpd);
-            iterations++;
+            robot.gp.update(dpd);            
             std::this_thread::sleep_for(std::chrono::milliseconds(120));
         }
         else return true;
@@ -74,7 +75,7 @@ class FindPositionState : public State{
 
     void exit(RobotSystem& robot) override
     {
-        if (!robot.doUnparking) robot.pathfinder.setStartingPosition(robot.position);
+        if (!robot.doUnparking) {robot.pathfinder.setStartingPosition(robot.position); printf("Called!\n"); printf("Position: X: %.2f Y: %.2f\n", robot.position.x, robot.position.y);}
         else robot.pathfinder.setStartingPosition(Vec2f(2.0f, 0.5f));
     }
 
