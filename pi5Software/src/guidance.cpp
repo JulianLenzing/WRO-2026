@@ -17,7 +17,7 @@
 #define SERVO_DUTY_CYCLE_RANGE 1.0f
 #define MOTOR_DUTY_CYCLE_RANGE 1.0f
 #define MAX_THROTTLE 1.0f
-#define MIN_THROTTLE 0.24f
+#define MIN_THROTTLE 0.27f
 #define REVERSE_MAX_THROTTLE 1.0f
 #define REVERSE_MIN_THROTTLE 0.35f
 #define ACCELERATION_CONSTANT 0.5f // The distance from waypoint where full throtlle is reached in meters
@@ -110,7 +110,7 @@ void guidanceMain(GuidanceData& guidanceData)
                 // Throttle is capped at maxThrottle and minThrottle and is reduced at large steering angles and when closing to a waypoint with slow set
                 float currentAbsoluteSteeringAngle = steering.getAngle();
                 if(currentAbsoluteSteeringAngle > M_PI) currentAbsoluteSteeringAngle = 2*M_PI - currentAbsoluteSteeringAngle;
-                throttle = clamp(float(throttle - (currentAbsoluteSteeringAngle / MAX_STEERING_ANGLE * (maxThrottle - minThrottle))), minThrottle, maxThrottle);
+                if(currentWaypoint.value().steeringSlow) throttle = clamp(float(throttle - (currentAbsoluteSteeringAngle / MAX_STEERING_ANGLE * (maxThrottle - minThrottle))), minThrottle, maxThrottle);
 
                 // Enforce max throttle from waypoint
                 if (throttle > currentWaypoint.value().maxThrottle)
